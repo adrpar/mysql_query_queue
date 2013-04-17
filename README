@@ -1,0 +1,162 @@
+MySQL Query Job Queue
+---------------------
+(C) 2012, 2013 Adrian M. Partl, eScience Group AIP Potsdam
+
+This MySQL daemon plugin provides a job queue to which SQL queries can
+be submitted. These will then be executed according to priority and 
+number of already running queries. 
+
+The main use of such a job queue is to manage queries that take long
+times to run. This is especially needed for queries requiring full
+table scans on large tables. It is possible to limit the concurrent
+execution of such large queries and provide all the I/O throughput
+to only a handfull of queries. 
+
+Further the job queue provides the possibility to define maximum 
+execution times after which a job will be killed by the daemon.
+
+It is possible to define user groups and queues with different execution
+priorities. Each query needs to be submitted to a queue and the jobs
+priority is calculated according to the user group and queue. However
+the queue itself does not provide any user management, this facillity
+needs to be provided else where.
+
+The main design goals have been to connect the queue to our Big Data
+Webframework DAIQUIRI. If the queue might seem usefull to you in a
+different context, just contact the authors. It should not be too hard
+to make the queue fit for different use cases.
+
+And please note that this plugin "injects" into the MySQL server code.
+Any bug this plugin has, can bring down the whole server. YOU HAVE BEEN
+WARNED, so don't blame us if you use this in a productive environment 
+where harm can arrise...
+
+
+To install
+----------
+
+1) Download the mysql source corresponding to your installed
+   version. Building mysql from scratch is recommended.
+
+   Note: ONLY MYSQL VERSION 5.5 AND ABOVE ARE CURRENTLY 
+   	 SUPPORTED
+
+2) edit CMakeList.txt accordingly to point to the directory 
+   where mysql is installed.
+
+3) edit CMakeList.txt accordingly to point to the directory
+   of the mysql sources
+
+4) mkdir build
+   cd build
+
+5) cmake ..
+
+6) make
+
+7) make install
+
+8) log into mysql server as root and execute the commands in 
+   install_qqueue.sql
+
+   This will setup the neccessary tables, install the plugin
+   and create all the UDFs needed to administer the queue.
+
+9) Create user groups using "select qqueue_addUsrGrp(name, priority)
+
+10) Create queue using "select qqueue_addQueue(name, priority, timeout)
+
+11) adjust global valiables 
+    qqueue_numQueriesParallel and 
+    qqueue_intervalSec
+    to your liking...
+
+    show variables like '%qqueue%';
+
+12) DONE
+
+GENERAL WARNING!
+----------------
+
+Up to now, jobs are always executed as ROOT users! No security
+context change is performed.
+
+--------------------------------------------------------------
+|     IT IS THEREFORE YOUR RESPONSIBILITY TO MAKE SURE,      |
+|     	   	    ALL JOBS ARE KOSCHER!!!!                     |
+|                                                            |
+|              DONT BLAME US, YOU HAVE BEEN WARNED!          |
+--------------------------------------------------------------
+
+Usage UDF
+---------
+
+Please always administer the queue through the provided UDFs.
+Direct manipulation of the system tables is possible, however
+no consistency checks are then performed, no timestamps are
+set and priorities are not calculated...
+
+User Groups table:
+
+The user table holds information about various user groups that
+can be defined. Basically this alters the overall priority of a
+job which is the product of the user group priority and the queue
+priority. Higher number means higher priority...
+
+mysql.qqueue_usrGrps
+
+qqueue_addUsrGrp(string usrGrp_name, int usrGrp_priority)
+qqueue_updateUsrGrp(int usrGrp_id, string usrGrp_name, int usrGrp_priority)
+qqueue_flushUsrGrps()
+
+(to delete, use SQL on system table and flush the groups)
+
+
+Queues table:
+
+The queues table allow the definition of various queues (like in
+PBS/Torque). Queues have a priority and a timeout. If a query in
+a given queue exceeds its timelimit, the query queue daemon will
+kill the query! Time is given in seconds!
+
+mysql.qqueue_queues
+
+qqueue_addQueue(string queue_name, int queue_priority, int queue_timeout)
+qqueue_updateQueue(int queue_id, string queue_name, int queue_priority,
+                    int queue_timeout)
+qqueue_flushQueues()
+
+(to delete, use SQL on system table and flush the groups)
+
+
+Pending Job table:
+
+Table containing the submitted jobs that are still pending or running.
+The userId is not used by the queue and can be used for reference in
+a user management level. The paqu_flag (parallel query flag) informs
+the query daemon, that the query should be run as is and no 
+
+CREATE TABLE foo SELECT ....
+
+is added to the provided query on the last SELECT statement. If paqu_flag
+is 0, then the CREATE TABLE statement is added to the last SELECT 
+statement in the query. Multi queries are supported and are run under one
+MySQL connection/thread. Temporary tables and variables should be conserved.
+
+delJob will delete the job if it is still pending and will kill the job
+if it is already running.
+
+mysql.qqueue_jobs
+
+qqueue_addJob(int userId, string usrGrpName, string queueName,
+              string query, string result_db, string result_table,
+              int paqu_flag)
+qqueue_delJob(int jobId)
+
+
+History Job table:
+
+After any job execution terminates due to whatever reason, the job is
+moved to the qqueue_history table.
+
+mysql.qqueue_history

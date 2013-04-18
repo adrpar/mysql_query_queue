@@ -81,6 +81,7 @@ class qqueue_jobs_row : public ilink {
 #endif
 public:
     long long id;
+    char *mysqlUserName;
     int usrId;
     int usrGroup;
     int queue;
@@ -99,18 +100,21 @@ public:
     char *comment;
     
     qqueue_jobs_row() {
-	actualQuery = NULL;
-	query = NULL;
-    comment = NULL;
+      mysqlUserName = NULL;
+    	actualQuery = NULL;
+    	query = NULL;
+      comment = NULL;
     }
     
     virtual ~qqueue_jobs_row() {
-	if(actualQuery)
-	    my_free(actualQuery);
-	if(query)
-	    my_free(query);
-    if(comment)
-        my_free(comment);
+      if(mysqlUserName)
+          my_free(mysqlUserName);
+    	if(actualQuery)
+    	    my_free(actualQuery);
+    	if(query)
+    	    my_free(query);
+      if(comment)
+          my_free(comment);
     }
 };
 

@@ -450,8 +450,9 @@ pthread_handler_t qqueue_daemon(void *p) {
 
 		//get the time for sleep
 		for (int i = 0; i < intervalSec; i++) {
-		    if (thd->killed != 0)
+		    if (thd->killed != 0) {
 				break;
+		    }
 
 		    struct timespec deltaTime = {0, 0};
 		    deltaTime.tv_sec = time(NULL) + 1;
@@ -465,8 +466,10 @@ pthread_handler_t qqueue_daemon(void *p) {
 		    pthread_mutex_unlock(&qqueueKillMutex);
 #endif
 
-		    if (tmp != ETIMEDOUT)
+		    if (tmp != ETIMEDOUT) {
+		    	thd->killed = THD::KILL_CONNECTION;
 				break;
+		    }
 		}
     }
 

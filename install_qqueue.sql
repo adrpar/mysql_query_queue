@@ -15,6 +15,7 @@ create table if not exists mysql.qqueue_queues(
 ) engine=MyISAM default charset=utf8 collate=utf8_bin;
 create table if not exists mysql.qqueue_jobs(
     id bigint not null,
+    mysqlUserName char(64) not null,
     usrId int not null,
     usrGroup int not null,
     queue int not null,
@@ -35,6 +36,7 @@ create table if not exists mysql.qqueue_jobs(
 ) engine=InnoDB default charset=utf8 collate=utf8_bin;
 create table if not exists mysql.qqueue_history(
     id bigint not null,
+    mysqlUserName char(64) not null,
     usrId int not null,
     usrGroup int not null,
     queue int not null,

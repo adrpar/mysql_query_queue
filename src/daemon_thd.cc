@@ -196,7 +196,7 @@ int deinit_thread(THD ** thd) {
     if (thd != NULL && *thd != NULL) {
 
     if (! (*thd)->in_multi_stmt_transaction_mode())
-       (*thd)->mdl_context.release_transactional_locks();
+        (*thd)->mdl_context.release_transactional_locks();
     else
         (*thd)->mdl_context.release_statement_locks();
 

@@ -357,52 +357,62 @@ int updateQqueueJobsRow(qqueue_jobs_row *thisRow, TABLE *toThisTable) {
 
 int setQqueueJobsRow(qqueue_jobs_row *thisRow, TABLE *toThisTable) {
     //sanity check:
-    if(toThisTable->s->fields != 16) {
+    if(toThisTable->s->fields != 17) {
         return -1;
     }
 
     toThisTable->field[1]->set_notnull();
-    toThisTable->field[1]->store(thisRow->usrId, false);
+    if(thisRow->mysqlUserName == NULL) {
+        toThisTable->field[1]->store(current_thd->security_ctx->user, 
+                                        strlen(current_thd->security_ctx->user),
+                                        system_charset_info);
+    } else {
+        toThisTable->field[1]->store(thisRow->mysqlUserName, strlen(thisRow->mysqlUserName),
+                                        system_charset_info);
+    }
+
     toThisTable->field[2]->set_notnull();
-    toThisTable->field[2]->store(thisRow->usrGroup, false);
+    toThisTable->field[2]->store(thisRow->usrId, false);
     toThisTable->field[3]->set_notnull();
-    toThisTable->field[3]->store(thisRow->queue, false);
+    toThisTable->field[3]->store(thisRow->usrGroup, false);
     toThisTable->field[4]->set_notnull();
-    toThisTable->field[4]->store(thisRow->priority, false);
+    toThisTable->field[4]->store(thisRow->queue, false);
+    toThisTable->field[5]->set_notnull();
+    toThisTable->field[5]->store(thisRow->priority, false);
     if(thisRow->query != NULL) {
-	toThisTable->field[5]->set_notnull();
-	toThisTable->field[5]->store(thisRow->query, strlen(thisRow->query), system_charset_info);
+    	toThisTable->field[6]->set_notnull();
+    	toThisTable->field[6]->store(thisRow->query, strlen(thisRow->query), system_charset_info);
     } else {
-	toThisTable->field[5]->set_notnull();
-	toThisTable->field[5]->store('\0', strlen('\0'), system_charset_info);
+    	toThisTable->field[6]->set_notnull();
+    	toThisTable->field[6]->store('\0', strlen('\0'), system_charset_info);
     }
-    toThisTable->field[6]->set_notnull();
-    toThisTable->field[6]->store(thisRow->status, false);
     toThisTable->field[7]->set_notnull();
-    toThisTable->field[7]->store(thisRow->resultDBName, strlen(thisRow->resultDBName), system_charset_info);
+    toThisTable->field[7]->store(thisRow->status, false);
     toThisTable->field[8]->set_notnull();
-    toThisTable->field[8]->store(thisRow->resultTableName, strlen(thisRow->resultTableName), system_charset_info);
+    toThisTable->field[8]->store(thisRow->resultDBName, strlen(thisRow->resultDBName), system_charset_info);
     toThisTable->field[9]->set_notnull();
-    toThisTable->field[9]->store(thisRow->paquFlag, false);
+    toThisTable->field[9]->store(thisRow->resultTableName, strlen(thisRow->resultTableName), system_charset_info);
     toThisTable->field[10]->set_notnull();
-    toThisTable->field[10]->store_time(&thisRow->timeSubmit, MYSQL_TIMESTAMP_DATETIME);
+    toThisTable->field[10]->store(thisRow->paquFlag, false);
     toThisTable->field[11]->set_notnull();
-    toThisTable->field[11]->store_time(&thisRow->timeExecute, MYSQL_TIMESTAMP_DATETIME);
+    toThisTable->field[11]->store_time(&thisRow->timeSubmit, MYSQL_TIMESTAMP_DATETIME);
     toThisTable->field[12]->set_notnull();
-    toThisTable->field[12]->store_time(&thisRow->timeFinish, MYSQL_TIMESTAMP_DATETIME);
+    toThisTable->field[12]->store_time(&thisRow->timeExecute, MYSQL_TIMESTAMP_DATETIME);
+    toThisTable->field[13]->set_notnull();
+    toThisTable->field[13]->store_time(&thisRow->timeFinish, MYSQL_TIMESTAMP_DATETIME);
     if(thisRow->actualQuery != NULL) {
-	toThisTable->field[13]->set_notnull();
-	toThisTable->field[13]->store(thisRow->actualQuery, strlen(thisRow->actualQuery), system_charset_info);
+    	toThisTable->field[14]->set_notnull();
+    	toThisTable->field[14]->store(thisRow->actualQuery, strlen(thisRow->actualQuery), system_charset_info);
     } else {
-	toThisTable->field[13]->set_null();
+    	toThisTable->field[14]->set_null();
     }
-    toThisTable->field[14]->set_notnull();
-    toThisTable->field[14]->store(thisRow->error, strlen(thisRow->error), system_charset_info);   
-	if(thisRow->comment != NULL && strlen(thisRow->comment) != 0) {
     toThisTable->field[15]->set_notnull();
-    toThisTable->field[15]->store(thisRow->comment, strlen(thisRow->comment), system_charset_info);
+    toThisTable->field[15]->store(thisRow->error, strlen(thisRow->error), system_charset_info);   
+	if(thisRow->comment != NULL && strlen(thisRow->comment) != 0) {
+        toThisTable->field[16]->set_notnull();
+        toThisTable->field[16]->store(thisRow->comment, strlen(thisRow->comment), system_charset_info);
     } else {
-    toThisTable->field[15]->set_null();
+        toThisTable->field[16]->set_null();
     }
 
     return 0;
@@ -684,18 +694,18 @@ qqueue_jobs_row **getHighestPriorityJob(TABLE *fromThisTable, int numJobs) {
 
     mysql_mutex_lock(&LOCK_jobs);
     if(fromThisTable->file->ha_table_flags() & HA_STATS_RECORDS_IS_EXACT) {
-	numTotalJobs = fromThisTable->file->stats.records;
+    	numTotalJobs = fromThisTable->file->stats.records;
     } else {
-	//count number of rows the "stupid" way...
-	error = fromThisTable->file->ha_rnd_init(true);
+    	//count number of rows the "stupid" way...
+    	error = fromThisTable->file->ha_rnd_init(true);
 #if MYSQL_VERSION_ID >= 50601
-    while (!(error = fromThisTable->file->ha_rnd_next(fromThisTable->record[0]))) {
+        while (!(error = fromThisTable->file->ha_rnd_next(fromThisTable->record[0]))) {
 #else
-	while (!(error = fromThisTable->file->rnd_next(fromThisTable->record[0]))) {
+	   while (!(error = fromThisTable->file->rnd_next(fromThisTable->record[0]))) {
 #endif
-	    numTotalJobs++;
-	}
-	fromThisTable->file->ha_rnd_end();
+	       numTotalJobs++;
+	   }
+	   fromThisTable->file->ha_rnd_end();
     }
     
     //fprintf(stderr, "Num Rows: %i\n", numTotalJobs);
@@ -715,18 +725,18 @@ qqueue_jobs_row **getHighestPriorityJob(TABLE *fromThisTable, int numJobs) {
     error = fromThisTable->file->ha_rnd_init(true);
     for(int i=0; i<numTotalJobs; i++) {
 #if MYSQL_VERSION_ID >= 50601
-    error = fromThisTable->file->ha_rnd_next(fromThisTable->record[0]);
+        error = fromThisTable->file->ha_rnd_next(fromThisTable->record[0]);
 #else
-	error = fromThisTable->file->rnd_next(fromThisTable->record[0]);
+	   error = fromThisTable->file->rnd_next(fromThisTable->record[0]);
 #endif
 
 	if(error != 0)
 	    return NULL;
 	
 	sortArray[i].id = fromThisTable->field[0]->val_int();
-	sortArray[i].status = fromThisTable->field[6]->val_int();
-	sortArray[i].priority = fromThisTable->field[4]->val_int();
-	fromThisTable->field[10]->get_date(&(sortArray[i].subTime), 0);
+	sortArray[i].status = fromThisTable->field[7]->val_int();
+	sortArray[i].priority = fromThisTable->field[5]->val_int();
+	fromThisTable->field[11]->get_date(&(sortArray[i].subTime), 0);
     }
     
     fromThisTable->file->ha_rnd_end();
@@ -792,32 +802,35 @@ qqueue_jobs_row *extractJobFromTable(TABLE *fromThisTable) {
     qqueue_jobs_row *returnJob = new qqueue_jobs_row();
     
     returnJob->id = fromThisTable->field[0]->val_int();
-    returnJob->usrId = fromThisTable->field[1]->val_int();
-    returnJob->usrGroup = fromThisTable->field[2]->val_int();
-    returnJob->queue = fromThisTable->field[3]->val_int();
-    returnJob->priority = fromThisTable->field[4]->val_int();
+    String tmpStr1;
+    fromThisTable->field[1]->val_str(&tmpStr1);
+    returnJob->mysqlUserName = my_strdup(tmpStr1.c_ptr(), MYF(0));
+    returnJob->usrId = fromThisTable->field[2]->val_int();
+    returnJob->usrGroup = fromThisTable->field[3]->val_int();
+    returnJob->queue = fromThisTable->field[4]->val_int();
+    returnJob->priority = fromThisTable->field[5]->val_int();
     String tmpStr;
-    fromThisTable->field[5]->val_str(&tmpStr);
+    fromThisTable->field[6]->val_str(&tmpStr);
     returnJob->query = my_strdup(tmpStr.c_ptr(), MYF(0));
-    returnJob->status = (enum_queue_status)fromThisTable->field[6]->val_int();
+    returnJob->status = (enum_queue_status)fromThisTable->field[7]->val_int();
     String tmpStr2;
-    fromThisTable->field[7]->val_str(&tmpStr2);
+    fromThisTable->field[8]->val_str(&tmpStr2);
     strncpy(returnJob->resultDBName, tmpStr2.c_ptr(), QQUEUE_RESULTDBNAME_LEN);
     String tmpStr3;
-    fromThisTable->field[8]->val_str(&tmpStr3);
+    fromThisTable->field[9]->val_str(&tmpStr3);
     strncpy(returnJob->resultTableName, tmpStr3.c_ptr(), QQUEUE_RESULTTBLNAME_LEN);
-    returnJob->paquFlag = fromThisTable->field[9]->val_int();
-    fromThisTable->field[10]->get_date(&returnJob->timeSubmit, 0);
-    fromThisTable->field[11]->get_date(&returnJob->timeExecute, 0);
-    fromThisTable->field[12]->get_date(&returnJob->timeFinish, 0);
+    returnJob->paquFlag = fromThisTable->field[10]->val_int();
+    fromThisTable->field[11]->get_date(&returnJob->timeSubmit, 0);
+    fromThisTable->field[12]->get_date(&returnJob->timeExecute, 0);
+    fromThisTable->field[13]->get_date(&returnJob->timeFinish, 0);
     String tmpStr4;
-    fromThisTable->field[13]->val_str(&tmpStr4);
+    fromThisTable->field[14]->val_str(&tmpStr4);
     returnJob->actualQuery = my_strdup(tmpStr4.c_ptr(), MYF(0));
     String tmpStr5;
-    fromThisTable->field[14]->val_str(&tmpStr5);
+    fromThisTable->field[15]->val_str(&tmpStr5);
     strncpy(returnJob->error, tmpStr5.c_ptr(), QQUEUE_ERROR_LEN);
     String tmpStr6;
-    fromThisTable->field[15]->val_str(&tmpStr6);
+    fromThisTable->field[16]->val_str(&tmpStr6);
     returnJob->comment = my_strdup(tmpStr6.c_ptr(), MYF(0));
     
     return returnJob;

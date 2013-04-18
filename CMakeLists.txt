@@ -5,16 +5,12 @@ project (daemon_jobqueue)
 #### uncomment this, if you want to specify own mysql path
 ###########################################################
 set(MYSQL_PATH "/usr/local/mysql")
-#set(MYSQL_PATH "/usr/local/mysql5.6")
-#set(MYSQL_PATH "/opt/mysql")
 
 ###########################################################
-#### path to the mysql 5.5 sources - download them from
+#### path to the mysql 5.5/5.6 sources - download them from
 #### www.mysql.com if you don't have them 
 ###########################################################
 set(MYSQL_SOURCES_PATH "/home/adrpar/Downloads/mysql-5.5.14-spider-2.28-vp-0.17-hs-1.1-q4m-0.95")
-#set(MYSQL_SOURCES_PATH "/home/adrpar/Downloads/mysql-5.6.10")
-#set(MYSQL_SOURCES_PATH "/home/jochen/code/build/mysql-5.5.28")
 
 if(MYSQL_PATH)
     set(MYSQL_CONFIG "${MYSQL_PATH}/bin/mysql_config")

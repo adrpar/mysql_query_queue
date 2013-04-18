@@ -87,14 +87,15 @@
  	my_free(usrStr);
  	my_free(hostStr);
 
-    //it is not guaranteed, that jobArg still exists here
  	deinit_thread(&(jobArg->thd));
 
  	if(jobArg->error != NULL)
  		my_free(jobArg->error);
+
  	delete jobArg->job;
  	delete jobArg;
 
+ 	my_thread_end();
  	pthread_exit(0);
  	return NULL;
  }

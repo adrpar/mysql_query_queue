@@ -1,3 +1,4 @@
+-- TABLE DECLARATIONS
 create table if not exists mysql.qqueue_usrGrps(
     id int not null auto_increment,
     name char(64) not null,
@@ -56,7 +57,10 @@ create table if not exists mysql.qqueue_history(
     key id_priority (status asc, priority desc, timeSubmit asc)
 ) engine=InnoDB default charset=utf8 collate=utf8_bin;
 
+-- INSTALL THE PLUGIN
 INSTALL PLUGIN qqueue SONAME 'daemon_jobqueue.so';
+
+-- INSTALL THE UDFs
 CREATE FUNCTION qqueue_addUsrGrp RETURNS INTEGER SONAME 'daemon_jobqueue.so';
 CREATE FUNCTION qqueue_updateUsrGrp RETURNS INTEGER SONAME 'daemon_jobqueue.so';
 CREATE FUNCTION qqueue_flushUsrGrps RETURNS INTEGER SONAME 'daemon_jobqueue.so';
@@ -66,5 +70,37 @@ CREATE FUNCTION qqueue_flushQueues RETURNS INTEGER SONAME 'daemon_jobqueue.so';
 CREATE FUNCTION qqueue_addJob RETURNS INTEGER SONAME 'daemon_jobqueue.so';
 CREATE FUNCTION qqueue_killJob RETURNS INTEGER SONAME 'daemon_jobqueue.so';
 
+-- ADD A PROCEDURE TO mysql FOR CLEANING UP THE QUERY QUEUE FROM UNAVAILABLE TABLE
 
--- CREATE FUNCTION qqueue_execJob RETURNS INTEGER SONAME 'daemon_jobqueue.so';
+-- VERSION SETTING THE ENTRIES TO status=DELETED
+USE mysql;
+DROP PROCEDURE IF EXISTS qqueue_clean_history;
+DELIMITER //
+CREATE PROCEDURE qqueue_clean_history ()
+BEGIN
+  UPDATE mysql.qqueue_history AS a 
+    LEFT OUTER JOIN information_schema.tables AS b 
+        ON a.resultDBName=b.TABLE_SCHEMA 
+            AND a.resultTableName = b.TABLE_NAME 
+    SET a.status=2 
+    WHERE a.status=4 
+        AND b.TABLE_NAME IS NULL
+        AND b.TABLE_SCHEMA IS NULL;
+END //
+DELIMITER ;
+
+-- VERSION DELETING ALL UNAVAILABLE ENTRIES
+USE mysql;
+DROP PROCEDURE IF EXISTS qqueue_wipe_history;
+DELIMITER //
+CREATE PROCEDURE qqueue_wipe_history ()
+BEGIN
+  DELETE a.* FROM mysql.qqueue_history AS a 
+    LEFT OUTER JOIN information_schema.tables AS b 
+        ON a.resultDBName=b.TABLE_SCHEMA 
+            AND a.resultTableName = b.TABLE_NAME 
+    WHERE a.status=4 
+        AND b.TABLE_NAME IS NULL
+        AND b.TABLE_SCHEMA IS NULL;
+END //
+DELIMITER ;

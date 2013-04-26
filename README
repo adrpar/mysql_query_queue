@@ -160,3 +160,22 @@ After any job execution terminates due to whatever reason, the job is
 moved to the qqueue_history table.
 
 mysql.qqueue_history
+
+Usage Stored Procedures
+-----------------------
+
+If you have fully run "install_qqueue.sql", two stored procedures have been
+installed in the "mysql" database:
+
+qqueue_clean_history():
+
+By running "CALL qqueue_clean_history();" in the mysql database, you can set
+all jobs in the history as DELETED, that have no corresponding result table
+anymore. This should be run as root, that mysql has full access to the complete
+information_schema.tables table.
+
+qqueue_wipe_history():
+
+By running "CALL qqueue_wipe_history();" in the mysql database, all jobs are deleted
+that have no corresponding result table anymore. This should be run as root, that 
+mysql has full access to the complete information_schema.tables table.

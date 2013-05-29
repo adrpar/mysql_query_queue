@@ -20,7 +20,7 @@
  *
  * common functions for creating and destroying threads and daemon
  * threads
- * 
+ *
  *****************************************************************
  */
 
@@ -49,13 +49,13 @@
 #pragma implementation
 #endif
 
-void pre_init_daemon_thread(THD* thd) {
-    thd->client_capabilities= 0;
+void pre_init_daemon_thread(THD *thd) {
+    thd->client_capabilities = 0;
     thd->security_ctx->master_access = 0;
     thd->security_ctx->db_access = 0;
-    thd->security_ctx->host_or_ip= (char*)my_localhost;
+    thd->security_ctx->host_or_ip = (char *)my_localhost;
     my_net_init(&thd->net, NULL);
-    thd->security_ctx->set_user((char*)"queue_daemon");
+    thd->security_ctx->set_user((char *)"queue_daemon");
     thd->net.read_timeout = slave_net_timeout;
     thd->slave_thread = 0;
     thd->variables.option_bits |= OPTION_AUTO_IS_NULL;
@@ -71,18 +71,18 @@ void pre_init_daemon_thread(THD* thd) {
     mysql_mutex_unlock(&LOCK_thread_count);
 #else
     pthread_mutex_unlock(&LOCK_thread_count);
-#endif    
+#endif
 
-    thd->proc_info= "Initialized";
+    thd->proc_info = "Initialized";
     thd->set_time();
 
-    thd->variables.lock_wait_timeout= LONG_TIMEOUT;
+    thd->variables.lock_wait_timeout = LONG_TIMEOUT;
 }
 
-bool post_init_daemon_thread(THD* thd) {
-  if (init_thr_lock() || thd->store_globals()) {
-    return TRUE;
-  }
+bool post_init_daemon_thread(THD *thd) {
+    if (init_thr_lock() || thd->store_globals()) {
+        return TRUE;
+    }
 
 #if MYSQL_VERSION_ID < 50605
     thd->start_time = my_time(0);
@@ -114,7 +114,7 @@ bool post_init_daemon_thread(THD* thd) {
 }
 
 
-int init_thread(THD ** thd, const char * threadInfo, bool daemon) {
+int init_thread(THD **thd, const char *threadInfo, bool daemon) {
     THD *newThd;
     my_thread_init();
     newThd = new THD;
@@ -134,13 +134,13 @@ int init_thread(THD ** thd, const char * threadInfo, bool daemon) {
 
     (*thd)->store_globals();
     (*thd)->system_thread = static_cast<enum_thread_type> (1 << 30UL);
-    (*thd)->client_capabilities= 0;
+    (*thd)->client_capabilities = 0;
 
     (*thd)->security_ctx->master_access = 0;
     (*thd)->security_ctx->db_access = 0;
-    (*thd)->security_ctx->host_or_ip= (char*)my_localhost;
+    (*thd)->security_ctx->host_or_ip = (char *)my_localhost;
     my_net_init(&(*thd)->net, NULL);
-    (*thd)->security_ctx->set_user((char*)"queue_daemon");
+    (*thd)->security_ctx->set_user((char *)"queue_daemon");
     (*thd)->net.read_timeout = slave_net_timeout;
     (*thd)->slave_thread = 0;
     (*thd)->variables.option_bits |= OPTION_AUTO_IS_NULL;
@@ -148,7 +148,7 @@ int init_thread(THD ** thd, const char * threadInfo, bool daemon) {
 
     (*thd)->db = NULL;
 
-    (*thd)->proc_info= "Initialized";
+    (*thd)->proc_info = "Initialized";
     (*thd)->set_time();
 
 #if MYSQL_VERSION_ID < 50605
@@ -178,8 +178,8 @@ int init_thread(THD ** thd, const char * threadInfo, bool daemon) {
     pthread_mutex_unlock(&LOCK_thread_count);
 #endif
 
-    if(daemon == true) {
-        (*thd)->system_thread= SYSTEM_THREAD_EVENT_SCHEDULER;
+    if (daemon == true) {
+        (*thd)->system_thread = SYSTEM_THREAD_EVENT_SCHEDULER;
 #if MYSQL_VERSION_ID < 50600
         (*thd)->command = COM_DAEMON;
 #else
@@ -190,43 +190,43 @@ int init_thread(THD ** thd, const char * threadInfo, bool daemon) {
     return 0;
 }
 
-int deinit_thread(THD ** thd) {
-    (*thd)->proc_info= "Clearing";
-    
+int deinit_thread(THD **thd) {
+    (*thd)->proc_info = "Clearing";
+
     if (thd != NULL && *thd != NULL) {
 
-    if (! (*thd)->in_multi_stmt_transaction_mode())
-        (*thd)->mdl_context.release_transactional_locks();
-    else
-        (*thd)->mdl_context.release_statement_locks();
+        if (! (*thd)->in_multi_stmt_transaction_mode())
+            (*thd)->mdl_context.release_transactional_locks();
+        else
+            (*thd)->mdl_context.release_statement_locks();
 
-    net_end(&(*thd)->net);
+        net_end(&(*thd)->net);
 
 #if MYSQL_VERSION_ID >= 50505
-	mysql_mutex_lock(&LOCK_thread_count);
+        mysql_mutex_lock(&LOCK_thread_count);
 #else
-	pthread_mutex_lock(&LOCK_thread_count);
+        pthread_mutex_lock(&LOCK_thread_count);
 #endif
 
 #if MYSQL_VERSION_ID < 50606
-    (*thd)->unlink();
-	--thread_count;
+        (*thd)->unlink();
+        --thread_count;
 #else
-    remove_global_thread((*thd));
+        remove_global_thread((*thd));
 #endif
 
-    delete (*thd);
+        delete (*thd);
 
 #if MYSQL_VERSION_ID >= 50505
-	mysql_cond_signal(&COND_thread_count);
-	mysql_mutex_unlock(&LOCK_thread_count);
+        mysql_cond_signal(&COND_thread_count);
+        mysql_mutex_unlock(&LOCK_thread_count);
 #else
-	pthread_cond_signal(&COND_thread_count);
-	pthread_mutex_unlock(&LOCK_thread_count);
+        pthread_cond_signal(&COND_thread_count);
+        pthread_mutex_unlock(&LOCK_thread_count);
 #endif
-	my_pthread_setspecific_ptr(THR_THD, 0);
+        my_pthread_setspecific_ptr(THR_THD, 0);
     }
-    
+
     *thd = NULL;
 
     return 0;
@@ -236,17 +236,17 @@ int deinit_thread(THD ** thd) {
  * (shamelessly copy pasted from mysql source sql_parse.cc)
  *
  * SYNOPSIS
- *	sql_kill()
- *	thd                 Thread class
- *	id                  Thread id
- *	only_kill_query     Should it kill the query or the connection
+ *  sql_kill()
+ *  thd                 Thread class
+ *  id                  Thread id
+ *  only_kill_query     Should it kill the query or the connection
  */
 
 void sql_kill(THD *thd, ulong id, bool only_kill_query) {
     uint error;
     if (!(error = kill_one_thread(thd, id, only_kill_query))) {
-	if (!thd->killed)
-	    my_ok(thd);
+        if (!thd->killed)
+            my_ok(thd);
     } else
-	my_error(error, MYF(0), id);
+        my_error(error, MYF(0), id);
 }

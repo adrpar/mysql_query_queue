@@ -17,9 +17,9 @@
 /*****************************************************************
  ********                   sql_query                      *******
  *****************************************************************
- * 
+ *
  * functions for rewriting sql query to save result in table
- * 
+ *
  *****************************************************************
  */
 
@@ -41,44 +41,44 @@
 int addResultTableSQLAtPlaceholder(const char *inQuery, char **outQuery, char *db, char *table) {
     //find the placeholder string in the query
     const char placeholderString[] = PLACEHOLDER_STRING;
-    
+
     const char *plcStr;
     plcStr = strstr(inQuery, placeholderString);
-    
-    if(plcStr == NULL) {
-	outQuery = NULL;
-	return 0;
+
+    if (plcStr == NULL) {
+        outQuery = NULL;
+        return 0;
     }
-    
+
     int prePend = plcStr - inQuery;
-    
+
     //build create table select string
     int strLen = strlen(db) + strlen(table) + 5 + strlen("CREATE TABLE  ");
-    char *addStr = (char*)malloc(strLen);
-    if(addStr == NULL) {
-	fprintf(stderr, "addResultTableSQLAtPlaceholder: unable to allocate enough memory\n");
+    char *addStr = (char *)malloc(strLen);
+    if (addStr == NULL) {
+        fprintf(stderr, "addResultTableSQLAtPlaceholder: unable to allocate enough memory\n");
         return 1;
     }
-    
+
     sprintf(addStr, " CREATE TABLE %s.%s ", db, table);
-    
+
     //build output string
-    *outQuery = (char*)malloc(strlen(inQuery) + strLen);
+    *outQuery = (char *)malloc(strlen(inQuery) + strLen);
     memset(*outQuery, 0, strlen(inQuery) + strLen);
-    if(*outQuery == NULL) {
-	fprintf(stderr, "addResultTableSQLAtPlaceholder: unable to allocate enough memory\n");
+    if (*outQuery == NULL) {
+        fprintf(stderr, "addResultTableSQLAtPlaceholder: unable to allocate enough memory\n");
         return 1;
     }
-    
+
     //insert create table string at right place
     strncat(*outQuery, inQuery, prePend);
     strcat(*outQuery, addStr);
-    strcat(*outQuery, (char*)(inQuery+prePend+strlen(placeholderString)));
-    
+    strcat(*outQuery, (char *)(inQuery + prePend + strlen(placeholderString)));
+
     fprintf(stderr, "Result: %s\n", *outQuery);
 
     free(addStr);
-    
+
     return 0;
 }
 
@@ -86,71 +86,71 @@ int addResultTableSQL(const char *inQuery, char **outQuery, char *db, char *tabl
     //create a copy of the in string
     int numTok = 0;
     char *uppCseStrCpy;
-    uppCseStrCpy = (char*)malloc(strlen(inQuery)+1);
-    if(uppCseStrCpy == NULL) {
-       fprintf(stderr, "addResultTableSQL: unable to allocate enough memory\n");
-       return 1;
+    uppCseStrCpy = (char *)malloc(strlen(inQuery) + 1);
+    if (uppCseStrCpy == NULL) {
+        fprintf(stderr, "addResultTableSQL: unable to allocate enough memory\n");
+        return 1;
     }
     strcpy(uppCseStrCpy, inQuery);
 
     int i;
-    for(i=0; i<strlen(uppCseStrCpy); i++) {
-	uppCseStrCpy[i] = toupper(uppCseStrCpy[i]);
+    for (i = 0; i < strlen(uppCseStrCpy); i++) {
+        uppCseStrCpy[i] = toupper(uppCseStrCpy[i]);
     }
-    
+
     //tokenize uppCseStrCpy
     List<char> tokenList;
-    char* currTok;
-    char* remain;
+    char *currTok;
+    char *remain;
     currTok = strtok_r(uppCseStrCpy, ";", &remain);
     while (currTok != NULL) {
-	tokenList.push_front(currTok);			//reorder
-	currTok = strtok_r(NULL, ";", &remain);
-	numTok++;
+        tokenList.push_front(currTok);          //reorder
+        currTok = strtok_r(NULL, ";", &remain);
+        numTok++;
     }
-    
+
     //now loop through all the sql lines from the back, to find
     //the last line with a SELECT statement and append the result field
     List_iterator<char> tokenList_iter(tokenList);
     char *currStr;
     char *selectPt;
-    int prePend; 
-    while(currStr = tokenList_iter++) {
-	selectPt = strstr(currStr, "SELECT ");
-	if(selectPt != NULL) {
-	    prePend = selectPt - uppCseStrCpy;
-	    break;
-	}
+    int prePend;
+    while (currStr = tokenList_iter++) {
+        selectPt = strstr(currStr, "SELECT ");
+        if (selectPt != NULL) {
+            prePend = selectPt - uppCseStrCpy;
+            break;
+        }
     }
-    
+
     //build create table select string
     int strLen = strlen(db) + strlen(table) + 5 + strlen("CREATE TABLE  ");
-    char *addStr = (char*)malloc(strLen);
-    if(addStr == NULL) {
-	fprintf(stderr, "addResultTableSQL: unable to allocate enough memory\n");
+    char *addStr = (char *)malloc(strLen);
+    if (addStr == NULL) {
+        fprintf(stderr, "addResultTableSQL: unable to allocate enough memory\n");
         return 1;
     }
-    
+
     sprintf(addStr, "CREATE TABLE %s.%s ", db, table);
-    
+
     //build output string
-    *outQuery = (char*)malloc(strlen(inQuery) + strLen);
+    *outQuery = (char *)malloc(strlen(inQuery) + strLen);
     memset(*outQuery, 0, strlen(inQuery) + strLen);
-    if(*outQuery == NULL) {
-	fprintf(stderr, "addResultTableSQL: unable to allocate enough memory\n");
+    if (*outQuery == NULL) {
+        fprintf(stderr, "addResultTableSQL: unable to allocate enough memory\n");
         return 1;
     }
-    
+
     //insert create table string at right place
     strncat(*outQuery, inQuery, prePend);
     strcat(*outQuery, addStr);
-    strcat(*outQuery, (char*)(inQuery+prePend));
-    
+    strcat(*outQuery, (char *)(inQuery + prePend));
+
     fprintf(stderr, "Result: %s\n", *outQuery);
-    
+
     free(uppCseStrCpy);
     free(addStr);
-    
+
     return 0;
 }
 
@@ -161,59 +161,59 @@ int validateMultiSQL(const char *inQuery) {
     //create a copy of the in string
     int numTok = 0;
     char *uppCseStrCpy;
-    uppCseStrCpy = (char*)malloc(strlen(inQuery)+1);
-    if(uppCseStrCpy == NULL) {
-       fprintf(stderr, "validateMultiSQL: unable to allocate enough memory\n");
-       return 1;
+    uppCseStrCpy = (char *)malloc(strlen(inQuery) + 1);
+    if (uppCseStrCpy == NULL) {
+        fprintf(stderr, "validateMultiSQL: unable to allocate enough memory\n");
+        return 1;
     }
     strcpy(uppCseStrCpy, inQuery);
 
     int i;
-    for(i=0; i<strlen(uppCseStrCpy); i++) {
+    for (i = 0; i < strlen(uppCseStrCpy); i++) {
         uppCseStrCpy[i] = toupper(uppCseStrCpy[i]);
     }
 
     //check if this is a query that is managed by paqu. if yes, we don't need to check
     //anything, the query is ok
-    if(strstr(uppCseStrCpy, "PAQU: QID") != NULL) {
+    if (strstr(uppCseStrCpy, "PAQU: QID") != NULL) {
         free(uppCseStrCpy);
         return 0;
     }
-    
+
     //tokenize uppCseStrCpy
     List<char> tokenList;
-    char* currTok;
-    char* remain;
+    char *currTok;
+    char *remain;
     currTok = strtok_r(uppCseStrCpy, ";", &remain);
     while (currTok != NULL) {
-    tokenList.push_front(currTok);          //reorder
-    currTok = strtok_r(NULL, ";", &remain);
-    numTok++;
+        tokenList.push_front(currTok);          //reorder
+        currTok = strtok_r(NULL, ";", &remain);
+        numTok++;
     }
-    
-    //now loop through all the sql lines and check if there is not a single 
+
+    //now loop through all the sql lines and check if there is not a single
     //sql line, that contains a SELECT statement, without an according CREATE
     //statement. Only writing to tables here... no output to any client through NET
     List_iterator<char> tokenList_iter(tokenList);
     char *currStr;
     char *selectPt;
-    char *createPt; 
-    while(currStr = tokenList_iter++) {
+    char *createPt;
+    while (currStr = tokenList_iter++) {
         selectPt = strstr(currStr, "SELECT ");
-        if(selectPt != NULL) {
+        if (selectPt != NULL) {
             //each select, needs to come with a create...
             createPt = strstr(currStr, "CREATE ");
 
-            if(createPt == NULL) {
+            if (createPt == NULL) {
                 //found a bad guy, give up and let upper routine raise alarm
                 return 1;
             }
 
         }
     }
-    
+
     free(uppCseStrCpy);
-    
+
     return 0;
 }
 
@@ -221,20 +221,20 @@ int splitQueries(const char *inQuery, query_list **outQueryList) {
     //create a copy of the in string
     int numTok = 0;
     char *queryCpy;
-    queryCpy = (char*)my_malloc(strlen(inQuery), MYF(0));
-    if(queryCpy == NULL) {
-       fprintf(stderr, "splitQueries: unable to allocate enough memory\n");
-       return 0;
+    queryCpy = (char *)my_malloc(strlen(inQuery), MYF(0));
+    if (queryCpy == NULL) {
+        fprintf(stderr, "splitQueries: unable to allocate enough memory\n");
+        return 0;
     }
     strcpy(queryCpy, inQuery);
-    
+
     //count and allocate
-    char* currTok;
-    char* remain;
+    char *currTok;
+    char *remain;
     currTok = strchr(queryCpy, ';');
     while (currTok != NULL) {
-	numTok++;
-	currTok = strchr(currTok+1, ';');
+        numTok++;
+        currTok = strchr(currTok + 1, ';');
     }
     *outQueryList = new query_list(numTok);
 
@@ -242,10 +242,10 @@ int splitQueries(const char *inQuery, query_list **outQueryList) {
     currTok = strtok_r(queryCpy, ";", &remain);
     numTok = 0;
     while (currTok != NULL) {
-	(*outQueryList)->array[numTok] = currTok;
-	currTok = strtok_r(NULL, ";", &remain);
-	numTok++;
-   }
-    
+        (*outQueryList)->array[numTok] = currTok;
+        currTok = strtok_r(NULL, ";", &remain);
+        numTok++;
+    }
+
     return numTok;
 }

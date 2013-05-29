@@ -17,14 +17,14 @@
 /*****************************************************************
  ********              MYSQL_QUERY_QUEUE                   *******
  *****************************************************************
- * 
+ *
  * mysql daemon that will provide a query queue to which you submit
- * jobs through UDFs. various queues can be defined, however no 
+ * jobs through UDFs. various queues can be defined, however no
  * execution optimisation is carried out yet.
- * 
+ *
  *****************************************************************
  */
- 
+
 #ifndef __MYSQL_QUERY_QUEUE__
 #define __MYSQL_QUERY_QUEUE__
 

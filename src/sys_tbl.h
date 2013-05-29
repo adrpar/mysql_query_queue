@@ -17,9 +17,9 @@
 /*****************************************************************
  ********                    sys_tbl                       *******
  *****************************************************************
- * 
+ *
  * common functions for handling system tables
- * 
+ *
  *****************************************************************
  */
 
@@ -98,31 +98,31 @@ public:
     char *actualQuery;
     char error[QQUEUE_ERROR_LEN];
     char *comment;
-    
+
     qqueue_jobs_row() {
-      mysqlUserName = NULL;
-    	actualQuery = NULL;
-    	query = NULL;
-      comment = NULL;
+        mysqlUserName = NULL;
+        actualQuery = NULL;
+        query = NULL;
+        comment = NULL;
     }
-    
+
     virtual ~qqueue_jobs_row() {
-      if(mysqlUserName)
-          my_free(mysqlUserName);
-    	if(actualQuery)
-    	    my_free(actualQuery);
-    	if(query)
-    	    my_free(query);
-      if(comment)
-          my_free(comment);
+        if (mysqlUserName)
+            my_free(mysqlUserName);
+        if (actualQuery)
+            my_free(actualQuery);
+        if (query)
+            my_free(query);
+        if (comment)
+            my_free(comment);
     }
 };
 
 TABLE *open_sysTbl(THD *thd, const char *tblName,
-  int tblNameLen, Open_tables_backup *tblBackup,
-  my_bool enableWrite, int *error);
+                   int tblNameLen, Open_tables_backup *tblBackup,
+                   my_bool enableWrite, int *error);
 
-void close_sysTbl(THD *thd, TABLE * table, Open_tables_backup *tblBackup);
+void close_sysTbl(THD *thd, TABLE *table, Open_tables_backup *tblBackup);
 
 int retrRowAtPKId(TABLE *table, ulonglong id);
 
@@ -138,8 +138,8 @@ int updateQqueueJobsRow(qqueue_jobs_row *thisRow, TABLE *toThisTable);
 int setQqueueJobsRow(qqueue_jobs_row *thisRow, TABLE *toThisTable);
 int deleteQqueueJobsRow(ulonglong id, TABLE *toThisTable);
 
-qqueue_usrGrp_row *getUsrGrp(char * usrGrp);
-qqueue_queues_row *getQueue(char * queue);
+qqueue_usrGrp_row *getUsrGrp(char *usrGrp);
+qqueue_queues_row *getQueue(char *queue);
 qqueue_queues_row *getQueueByID(long long id);
 qqueue_jobs_row *getJobFromID(TABLE *fromThisTable, ulonglong id);
 qqueue_jobs_row **getHighestPriorityJob(TABLE *fromThisTable, int numJobs);

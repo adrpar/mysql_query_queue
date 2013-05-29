@@ -42,75 +42,72 @@
 #pragma implementation
 #endif
 
-/*                                                                                                            
-  Create db names list. Information schema name always is first in list                                       
-                                                                                                              
-  SYNOPSIS                                                                                                    
-    make_db_list()                                                                                            
-    thd                   thread handler                                                                      
-    files                 list of db names                                                                    
-    wild                  wild string                                                                         
-    idx_field_vals        idx_field_vals->db_name contains db name or                                         
-                          wild string                                                                         
-    with_i_schema         returns 1 if we added 'IS' name to list                                             
-                          otherwise returns 0                                                                 
-                                                                                                              
-  RETURN                                                                                                      
-    zero                  success                                                                             
-    non-zero              error                                                                               
+/*
+  Create db names list. Information schema name always is first in list
+
+  SYNOPSIS
+    make_db_list()
+    thd                   thread handler
+    files                 list of db names
+    wild                  wild string
+    idx_field_vals        idx_field_vals->db_name contains db name or
+                          wild string
+    with_i_schema         returns 1 if we added 'IS' name to list
+                          otherwise returns 0
+
+  RETURN
+    zero                  success
+    non-zero              error
 */
 
 int make_db_list(THD *thd, List<LEX_STRING> *files,
-                 bool *with_i_schema)
-{
-  LEX_STRING *i_s_name_copy= 0;
-  i_s_name_copy= thd->make_lex_string(i_s_name_copy,
-                                      INFORMATION_SCHEMA_NAME.str,
-                                      INFORMATION_SCHEMA_NAME.length, TRUE);
-  *with_i_schema= 0;
+                 bool *with_i_schema) {
+    LEX_STRING *i_s_name_copy = 0;
+    i_s_name_copy = thd->make_lex_string(i_s_name_copy,
+                                         INFORMATION_SCHEMA_NAME.str,
+                                         INFORMATION_SCHEMA_NAME.length, TRUE);
+    *with_i_schema = 0;
 
-  /*                                                                                                          
-    Create list of existing databases. It is used in case                                                     
-    of select from information schema table                                                                   
-  */
-  if (files->push_back(i_s_name_copy))
-    return 1;
-  *with_i_schema= 1;
-  return (find_files(thd, files, NullS,
-                     mysql_data_home, NullS, 1) != FIND_FILES_OK);
+    /*
+      Create list of existing databases. It is used in case
+      of select from information schema table
+    */
+    if (files->push_back(i_s_name_copy))
+        return 1;
+    *with_i_schema = 1;
+    return (find_files(thd, files, NullS,
+                       mysql_data_home, NullS, 1) != FIND_FILES_OK);
 }
 
-/**                                                                                                           
-  @brief          Create table names list                                                                     
-                                                                                                              
-  @details        The function creates the list of table names in                                             
-                  database                                                                                    
-                                                                                                              
-  @param[in]      thd                   thread handler                                                        
-  @param[in]      table_names           List of table names in database                                       
-  @param[in]      lex                   pointer to LEX struct                                                 
-  @param[in]      lookup_field_vals     pointer to LOOKUP_FIELD_VALUE struct                                  
-  @param[in]      with_i_schema         TRUE means that we add I_S tables to list                             
-  @param[in]      db_name               database name                                                         
-                                                                                                              
-  @return         Operation status                                                                            
-    @retval       0           ok                                                                              
-    @retval       1           fatal error                                                                     
-    @retval       2           Not fatal error; Safe to ignore this file list                                  
+/**
+  @brief          Create table names list
+
+  @details        The function creates the list of table names in
+                  database
+
+  @param[in]      thd                   thread handler
+  @param[in]      table_names           List of table names in database
+  @param[in]      lex                   pointer to LEX struct
+  @param[in]      lookup_field_vals     pointer to LOOKUP_FIELD_VALUE struct
+  @param[in]      with_i_schema         TRUE means that we add I_S tables to list
+  @param[in]      db_name               database name
+
+  @return         Operation status
+    @retval       0           ok
+    @retval       1           fatal error
+    @retval       2           Not fatal error; Safe to ignore this file list
 */
 
 int make_table_name_list(THD *thd, List<LEX_STRING> *table_names,
-                     bool with_i_schema, LEX_STRING *db_name)
-{
-  char path[FN_REFLEN + 1];
-  build_table_filename(path, sizeof(path) - 1, db_name->str, "", "", 0);
+                         bool with_i_schema, LEX_STRING *db_name) {
+    char path[FN_REFLEN + 1];
+    build_table_filename(path, sizeof(path) - 1, db_name->str, "", "", 0);
 
-  find_files_result res= find_files(thd, table_names, db_name->str, path,
-                                    NULL, 0);
-  if (res != FIND_FILES_OK)
-  {
-    return 1;
-  }
-  return 0;
+    find_files_result res = find_files(thd, table_names, db_name->str, path,
+                                       NULL, 0);
+    if (res != FIND_FILES_OK) {
+        return 1;
+    }
+    return 0;
 }
 

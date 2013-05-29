@@ -35,6 +35,6 @@ int make_db_list(THD *thd, List<LEX_STRING> *files,
                  bool *with_i_schema);
 
 int make_table_name_list(THD *thd, List<LEX_STRING> *table_names,
-                     bool with_i_schema, LEX_STRING *db_name);
+                         bool with_i_schema, LEX_STRING *db_name);
 
 #endif

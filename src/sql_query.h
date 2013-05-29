@@ -17,9 +17,9 @@
 /*****************************************************************
  ********                   sql_query                      *******
  *****************************************************************
- * 
+ *
  * functions for rewriting sql query to save result in table
- * 
+ *
  *****************************************************************
  */
 
@@ -38,22 +38,22 @@ class query_list {
 public:
 
     query_list() {
-	array = NULL;
+        array = NULL;
     }
 
     query_list(int newLen) {
-	array = (char**) my_malloc(newLen * sizeof (char), MYF(0));
-	len = newLen;
+        array = (char **) my_malloc(newLen * sizeof (char), MYF(0));
+        len = newLen;
     }
 
     virtual ~query_list() {
-		if (array != NULL) {
-		    my_free(array[0]);
-		    my_free(array);
-		}
+        if (array != NULL) {
+            my_free(array[0]);
+            my_free(array);
+        }
     }
 
-    char ** array;
+    char **array;
     int len;
 };
 

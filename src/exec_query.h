@@ -14,13 +14,13 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
 
- /*****************************************************************
+/*****************************************************************
  ********                   exec_query                     *******
  *****************************************************************
- * 
+ *
  * functions for creating a new thread that will execute a job/query
  * this code is highly inspired by sql/sql_parse.cc
- * 
+ *
  *****************************************************************
  */
 
@@ -41,24 +41,24 @@
 
 struct jobWorkerThd {
     qqueue_jobs_row *job;
-    char * error;
-    int (*thdTerm)(jobWorkerThd*);
-    int (*thdKillHandler)(jobWorkerThd*);
+    char *error;
+    int (*thdTerm)(jobWorkerThd *);
+    int (*thdKillHandler)(jobWorkerThd *);
     bool killReasonTimeout;
     pthread_t pthd;
-    THD * thd;
+    THD *thd;
 
     jobWorkerThd() {
-    	job = NULL;
-    	error = NULL;
-    	thd = NULL;
+        job = NULL;
+        error = NULL;
+        thd = NULL;
     }
 };
 
 int init_worker_thread(jobWorkerThd *job);
 
 pthread_handler_t worker_thread(void *arg);
-int workload(jobWorkerThd * jobArg);
+int workload(jobWorkerThd *jobArg);
 
 int registerThreadStart(jobWorkerThd *job);
 int registerThreadEnd(jobWorkerThd *job, bool killed, bool timedOut);

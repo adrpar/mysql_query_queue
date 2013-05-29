@@ -1,5 +1,5 @@
 /*  Copyright (c) 2012, 2013, Adrian M. Partl, eScience Group at the
-	Leibniz Institut for Astrophysics, Potsdam
+    Leibniz Institut for Astrophysics, Potsdam
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  *
  * common functions for creating and destroying threads and daemon
  * threads
- * 
+ *
  *****************************************************************
  */
 
@@ -36,11 +36,11 @@
 #endif
 
 
-void pre_init_daemon_thread(THD* thd);
-bool post_init_daemon_thread(THD* thd);
+void pre_init_daemon_thread(THD *thd);
+bool post_init_daemon_thread(THD *thd);
 
-int init_thread(THD ** thd, const char * threadInfo, bool daemon);
-int deinit_thread(THD ** thd);
+int init_thread(THD **thd, const char *threadInfo, bool daemon);
+int deinit_thread(THD **thd);
 void sql_kill(THD *thd, ulong id, bool only_kill_query);
 
 #endif

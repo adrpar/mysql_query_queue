@@ -148,10 +148,19 @@ if it is already running.
 
 mysql.qqueue_jobs
 
-qqueue_addJob(int userId, string usrGrpName, string queueName,
+qqueue_addJob(int jobId, int userId, string usrGrpName, string queueName,
               string query, string result_db, string result_table,
-              int paqu_flag)
+              string comment, int paqu_flag, (optional) string actualQuery)
 qqueue_delJob(int jobId)
+
+Comment on certain options in qqueue_addJob:
+ - jobId: You can set the jobId to a value of your choice (it is your responsibility
+          that the jobId is unique), or set this to "NULL" for generation by the queue
+
+ - paqu_flag: If you set the paqu_flag (mainly intendet for use with the paqu parallel
+              query facility), the string given in query is not parsed and no "CREATE
+              TABLE" statement is added. The query holds the original query. It is up to
+              the user to provide a correctly "CREATE TABLE" escaped query in actualQuery.
 
 
 History Job table:

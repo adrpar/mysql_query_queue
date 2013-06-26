@@ -34,7 +34,7 @@ create table if not exists mysql.qqueue_jobs(
     comment text,
     primary key (id),
     key id_priority (status asc, priority desc, timeSubmit asc)
-) engine=MyISAM default charset=utf8 collate=utf8_bin;
+) engine=InnoDB default charset=utf8 collate=utf8_bin;
 create table if not exists mysql.qqueue_history(
     id bigint not null,
     mysqlUserName char(64) not null,
@@ -55,7 +55,7 @@ create table if not exists mysql.qqueue_history(
     comment text,
     primary key (id),
     key id_priority (status asc, priority desc, timeSubmit asc)
-) engine=MyISAM default charset=utf8 collate=utf8_bin;
+) engine=InnoDB default charset=utf8 collate=utf8_bin;
 
 -- INSTALL THE PLUGIN
 INSTALL PLUGIN qqueue SONAME 'daemon_jobqueue.so';

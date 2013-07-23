@@ -31,6 +31,7 @@
 #include <sql_class.h>
 #include <sql_base.h>
 #include <sql_time.h>
+#include <records.h>
 #include <mysql/plugin.h>
 #include <mysql.h>
 #include <key.h>
@@ -124,14 +125,13 @@ void loadQqueueUsrGrps(TABLE *fromThisTable) {
 
     mysql_mutex_lock(&LOCK_usrGrps);
 
+    READ_RECORD read_record_info;
+    init_read_record(&read_record_info, current_thd, fromThisTable, NULL, 1, 0, FALSE);
+    fromThisTable->use_all_columns();
+
     usrGrps.empty();
 
-    error = fromThisTable->file->ha_rnd_init(true);
-#if MYSQL_VERSION_ID >= 50601
-    while (!(error = fromThisTable->file->ha_rnd_next(fromThisTable->record[0]))) {
-#else
-    while (!(error = fromThisTable->file->rnd_next(fromThisTable->record[0]))) {
-#endif
+    while(!(error = read_record_info.read_record(&read_record_info))) {
         String newString;
         fromThisTable->field[1]->val_str(&newString);
 
@@ -143,6 +143,8 @@ void loadQqueueUsrGrps(TABLE *fromThisTable) {
 
         usrGrps.push_back(aRow);
     }
+
+    end_read_record(&read_record_info);
 
 #ifdef __QQUEUE_DEBUG__
     fprintf(stderr, "loadQqueueUsrGrps: content\n");
@@ -164,14 +166,13 @@ void loadQqueueQueues(TABLE *fromThisTable) {
 
     mysql_mutex_lock(&LOCK_queues);
 
+    READ_RECORD read_record_info;
+    init_read_record(&read_record_info, current_thd, fromThisTable, NULL, 1, 0, FALSE);
+    fromThisTable->use_all_columns();
+
     queues.empty();
 
-    error = fromThisTable->file->ha_rnd_init(true);
-#if MYSQL_VERSION_ID >= 50601
-    while (!(error = fromThisTable->file->ha_rnd_next(fromThisTable->record[0]))) {
-#else
-    while (!(error = fromThisTable->file->rnd_next(fromThisTable->record[0]))) {
-#endif
+    while(!(error = read_record_info.read_record(&read_record_info))) {
         String newString;
         fromThisTable->field[1]->val_str(&newString);
 
@@ -185,7 +186,7 @@ void loadQqueueQueues(TABLE *fromThisTable) {
         queues.push_back(aRow);
     }
 
-    fromThisTable->file->ha_rnd_end();
+    end_read_record(&read_record_info);
 
 #ifdef __QQUEUE_DEBUG__
     fprintf(stderr, "loadQqueueQueueRow: content\n");
@@ -692,20 +693,20 @@ qqueue_jobs_row **getHighestPriorityJob(TABLE *fromThisTable, int numJobs) {
 
     int numTotalJobs = 0;
 
+    READ_RECORD read_record_info;
+
     mysql_mutex_lock(&LOCK_jobs);
     if (fromThisTable->file->ha_table_flags() & HA_STATS_RECORDS_IS_EXACT) {
         numTotalJobs = fromThisTable->file->stats.records;
     } else {
+        init_read_record(&read_record_info, current_thd, fromThisTable, NULL, 1, 0,FALSE);
+        fromThisTable->use_all_columns();
+
         //count number of rows the "stupid" way...
-        error = fromThisTable->file->ha_rnd_init(true);
-#if MYSQL_VERSION_ID >= 50601
-        while (!(error = fromThisTable->file->ha_rnd_next(fromThisTable->record[0]))) {
-#else
-        while (!(error = fromThisTable->file->rnd_next(fromThisTable->record[0]))) {
-#endif
+        while(!(error = read_record_info.read_record(&read_record_info))) {
             numTotalJobs++;
         }
-        fromThisTable->file->ha_rnd_end();
+        end_read_record(&read_record_info);
     }
 
     //fprintf(stderr, "Num Rows: %i\n", numTotalJobs);
@@ -722,13 +723,11 @@ qqueue_jobs_row **getHighestPriorityJob(TABLE *fromThisTable, int numJobs) {
     }
 
     //fill arrays
-    error = fromThisTable->file->ha_rnd_init(true);
+    init_read_record(&read_record_info, current_thd, fromThisTable, NULL, 1, 0,FALSE);
+    fromThisTable->use_all_columns();
+
     for (int i = 0; i < numTotalJobs; i++) {
-#if MYSQL_VERSION_ID >= 50601
-        error = fromThisTable->file->ha_rnd_next(fromThisTable->record[0]);
-#else
-        error = fromThisTable->file->rnd_next(fromThisTable->record[0]);
-#endif
+        error = read_record_info.read_record(&read_record_info);
 
         if (error != 0)
             return NULL;
@@ -739,7 +738,7 @@ qqueue_jobs_row **getHighestPriorityJob(TABLE *fromThisTable, int numJobs) {
         fromThisTable->field[11]->get_date(&(sortArray[i].subTime), 0);
     }
 
-    fromThisTable->file->ha_rnd_end();
+    end_read_record(&read_record_info);
     mysql_mutex_unlock(&LOCK_jobs);
 
 #ifdef __QQUEUE_DEBUG__
@@ -850,21 +849,23 @@ int resetJobQueue(enum_queue_status status) {
         return -1;
     }
 
+    READ_RECORD read_record_info;
+    init_read_record(&read_record_info, current_thd, inThisJobsTable, NULL, 1, 0, FALSE);
+
+    inThisJobsTable->use_all_columns();
+
     //first count the number of jobs we need to address
     int jobCount = 0;
-    error = inThisJobsTable->file->ha_rnd_init(true);
-#if MYSQL_VERSION_ID >= 50601
-    while (!(error = inThisJobsTable->file->ha_rnd_next(inThisJobsTable->record[0]))) {
-#else
-    while (!(error = inThisJobsTable->file->rnd_next(inThisJobsTable->record[0]))) {
-#endif
+    while(!(error = read_record_info.read_record(&read_record_info))) {
         if (inThisJobsTable->field[6]->val_int() != QUEUE_RUNNING)
             continue;
 
         jobCount++;
     }
 
-    inThisJobsTable->file->ha_rnd_end();
+    end_read_record(&read_record_info);
+
+    init_read_record(&read_record_info, current_thd, inThisJobsTable, NULL, 1, 0, FALSE);
 
     //allocate memory and add all the job ids we need to work with to the work array
     workArray = (ulonglong *)my_malloc(jobCount * sizeof(ulonglong), MYF(0));
@@ -874,19 +875,14 @@ int resetJobQueue(enum_queue_status status) {
     }
 
     int i = 0;
-    error = inThisJobsTable->file->ha_rnd_init(true);
-#if MYSQL_VERSION_ID >= 50601
-    while (!(error = inThisJobsTable->file->ha_rnd_next(inThisJobsTable->record[0]))) {
-#else
-    while (!(error = inThisJobsTable->file->rnd_next(inThisJobsTable->record[0]))) {
-#endif
+    while(!(error = read_record_info.read_record(&read_record_info))) {
         if (inThisJobsTable->field[6]->val_int() != QUEUE_RUNNING)
             continue;
 
         workArray[i] = inThisJobsTable->field[0]->val_int();
         i++;
     }
-    inThisJobsTable->file->ha_rnd_end();
+    end_read_record(&read_record_info);
 
     close_sysTbl(current_thd, inThisJobsTable, &backup);
 

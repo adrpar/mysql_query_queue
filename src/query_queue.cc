@@ -386,12 +386,14 @@ pthread_handler_t qqueue_daemon(void *p) {
 
 #ifdef __QQUEUE_DEBUG__
         fprintf(stderr, "Empty slots: %i\n", numEmptySlots);
-        for (int i = 0; i < numEmptySlots + 1; i++) {
-            if (jobArray[i] == NULL)
-                break;
+        if(jobArray != NULL) {
+            for (int i = 0; i < numEmptySlots + 1; i++) {
+                if (jobArray[i] == NULL)
+                    break;
 
-            fprintf(stderr, "Job: %i, Status: %i, Priority: %i Query: %s\n", jobArray[i]->id, jobArray[i]->status,
-                    jobArray[i]->priority, jobArray[i]->query);
+                fprintf(stderr, "Job: %i, Status: %i, Priority: %i Query: %s\n", jobArray[i]->id, jobArray[i]->status,
+                        jobArray[i]->priority, jobArray[i]->query);
+            }
         }
 #endif
 

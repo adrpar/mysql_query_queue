@@ -251,6 +251,8 @@ int registerThreadStart(jobWorkerThd *job) {
     updateQqueueJobsRow(job->job, tbl);
 
     close_sysTbl(current_thd, tbl, &backup);
+
+    return 0;
 }
 
 int registerThreadEnd(jobWorkerThd *job, bool killed, bool timedOut) {
@@ -283,7 +285,7 @@ int registerThreadEnd(jobWorkerThd *job, bool killed, bool timedOut) {
     int error = 0;
     Open_tables_backup backup;
     TABLE *tbl = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, true, &error);
-    if (error || tbl == NULL && error != HA_STATUS_NO_LOCK) {
+    if (error || (tbl == NULL && error != HA_STATUS_NO_LOCK) ) {
         fprintf(stderr, "registerThreadEnd: error in opening jobs sys table: error: %i\n", error);
         close_sysTbl(current_thd, tbl, &backup);
         return 1;
@@ -304,4 +306,6 @@ int registerThreadEnd(jobWorkerThd *job, bool killed, bool timedOut) {
     addQqueueJobsRow(job->job, tbl, job->job->id);
 
     close_sysTbl(current_thd, tbl, &backup);
+
+    return 0;
 }

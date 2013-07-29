@@ -227,7 +227,7 @@ public:
                 int error = 0;
                 Open_tables_backup backup;
                 TABLE *tbl = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, false, &error);
-                if (error || tbl == NULL && error != HA_STATUS_NO_LOCK) {
+                if (error || (tbl == NULL && error != HA_STATUS_NO_LOCK) ) {
                     fprintf(stderr, "registerThreadEnd: error in opening jobs sys table: error: %i\n", error);
                     close_sysTbl(current_thd, tbl, &backup);
                     return 1;
@@ -360,7 +360,7 @@ pthread_handler_t qqueue_daemon(void *p) {
 
         int error = 0;
         tbl = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, false, &error);
-        if (error || tbl == NULL && error != HA_STATUS_NO_LOCK) {
+        if (error || (tbl == NULL && error != HA_STATUS_NO_LOCK) ) {
             fprintf(stderr, "qqueue_daemon: error in opening jobs sys table: error: %i\n", error);
             close_sysTbl(current_thd, tbl, &backup);
             break;
@@ -469,7 +469,11 @@ pthread_handler_t qqueue_daemon(void *p) {
 #endif
 
             if (tmp != ETIMEDOUT) {
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+                thd->killed = KILL_CONNECTION;
+#else
                 thd->killed = THD::KILL_CONNECTION;
+#endif
                 break;
             }
         }
@@ -563,7 +567,11 @@ static int qqueue_plugin_deinit(void *p) {
     char time_str[20];
 
     if (thd != NULL) {
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+        thd->killed = KILL_CONNECTION;
+#else
         thd->killed = THD::KILL_CONNECTION;
+#endif
     }
 #if MYSQL_VERSION_ID >= 50505
     mysql_cond_signal(&qqueueKillCond);
@@ -584,12 +592,19 @@ int queueRegisterThreadEnd(jobWorkerThd *job) {
     registerThreadEnd(job, false, false);
 
     queueList.unregisterAndStartNewJob(job);
+
+    return 0;
 }
 
 int queueRegisterThreadKill(jobWorkerThd *job) {
     //fooling mysql to properly register things...
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+    killed_state oldKill = job->thd->killed;
+    job->thd->killed = NOT_KILLED;
+#else
     THD::killed_state oldKill = job->thd->killed;
     job->thd->killed = THD::NOT_KILLED;
+#endif
 
     if (job->killReasonTimeout == false) {
         registerThreadEnd(job, true, false);
@@ -600,10 +615,14 @@ int queueRegisterThreadKill(jobWorkerThd *job) {
     queueList.unregisterAndStartNewJob(job);
 
     job->thd->killed = oldKill;
+
+    return 0;
 }
 
 int registerJobKill(ulong id) {
     queueList.killJob(id);
+
+    return 0;
 }
 
 void lockQueue() {

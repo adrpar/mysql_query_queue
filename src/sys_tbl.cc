@@ -111,7 +111,7 @@ int retrRowAtPKId(TABLE *table, ulonglong id) {
     char table_key[MAX_KEY_LENGTH];
     key_copy((uchar *) table_key, table->record[0], table->key_info, table->key_info->key_length);
 
-#if MYSQL_VERSION_ID >= 50601
+#if MYSQL_VERSION_ID >= 50601 || (defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500)
     error = table->file->ha_index_read_idx_map(table->record[0], 0, (uchar *) table_key, HA_WHOLE_KEY, HA_READ_KEY_EXACT);
 #else
     error = table->file->index_read_idx_map(table->record[0], 0, (uchar *) table_key, HA_WHOLE_KEY, HA_READ_KEY_EXACT);
@@ -354,6 +354,8 @@ int updateQqueueJobsRow(qqueue_jobs_row *thisRow, TABLE *toThisTable) {
         fprintf(stderr, "QQuery: Error in updating systbl qqueue_jobs record: id: %lli error: %i\n", thisRow->id, error);
         return error;
     }
+
+    return 0;
 }
 
 int setQqueueJobsRow(qqueue_jobs_row *thisRow, TABLE *toThisTable) {
@@ -396,11 +398,23 @@ int setQqueueJobsRow(qqueue_jobs_row *thisRow, TABLE *toThisTable) {
     toThisTable->field[10]->set_notnull();
     toThisTable->field[10]->store(thisRow->paquFlag, false);
     toThisTable->field[11]->set_notnull();
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+    toThisTable->field[11]->store_time(&thisRow->timeSubmit);
+#else    
     toThisTable->field[11]->store_time(&thisRow->timeSubmit, MYSQL_TIMESTAMP_DATETIME);
+#endif
     toThisTable->field[12]->set_notnull();
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+    toThisTable->field[12]->store_time(&thisRow->timeExecute);
+#else
     toThisTable->field[12]->store_time(&thisRow->timeExecute, MYSQL_TIMESTAMP_DATETIME);
+#endif
     toThisTable->field[13]->set_notnull();
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+    toThisTable->field[13]->store_time(&thisRow->timeFinish);
+#else
     toThisTable->field[13]->store_time(&thisRow->timeFinish, MYSQL_TIMESTAMP_DATETIME);
+#endif
     if (thisRow->actualQuery != NULL) {
         toThisTable->field[14]->set_notnull();
         toThisTable->field[14]->store(thisRow->actualQuery, strlen(thisRow->actualQuery), system_charset_info);
@@ -438,6 +452,8 @@ int deleteQqueueJobsRow(ulonglong id, TABLE *toThisTable) {
         fprintf(stderr, "QQuery: Error in deleting systbl qqueue_jobs record: id: %lli error: %i\n", id, error);
         return error;
     }
+
+    return 0;
 }
 
 int updateQqueueUsrGrpRow(qqueue_usrGrp_row *thisRow, TABLE *toThisTable) {
@@ -480,6 +496,8 @@ int updateQqueueUsrGrpRow(qqueue_usrGrp_row *thisRow, TABLE *toThisTable) {
 
     //reload groups list
     loadUsrGrps();
+
+    return 0;
 }
 
 
@@ -525,6 +543,8 @@ int updateQqueueQueuesRow(qqueue_queues_row *thisRow, TABLE *toThisTable) {
 
     //reload groups list
     loadQueues();
+
+    return 0;
 }
 
 int checkUsrGrpExisist(qqueue_usrGrp_row *thisRow) {
@@ -534,7 +554,7 @@ int checkUsrGrpExisist(qqueue_usrGrp_row *thisRow) {
     if (usrGrps.is_empty() != true) {
         qqueue_usrGrp_row *aRow;
         I_List_iterator<qqueue_usrGrp_row> usrGrpIter(usrGrps);
-        while (aRow = usrGrpIter++) {
+        while ( (aRow = usrGrpIter++) ) {
             if (strcmp(aRow->name, thisRow->name) == 0) {
 #ifdef __QQUEUE_DEBUG__
                 fprintf(stderr, "QQuery: User group %s already exists\n", thisRow->name);
@@ -554,7 +574,7 @@ int checkQueueExisist(qqueue_queues_row *thisRow) {
     if (queues.is_empty() != true) {
         qqueue_queues_row *aRow;
         I_List_iterator<qqueue_queues_row> queuesIter(queues);
-        while (aRow = queuesIter++) {
+        while ( (aRow = queuesIter++) ) {
             if (strcmp(aRow->name, thisRow->name) == 0) {
 #ifdef __QQUEUE_DEBUG__
                 fprintf(stderr, "QQuery: Queue %s already exists\n", thisRow->name);
@@ -590,7 +610,7 @@ qqueue_usrGrp_row *getUsrGrp(char *usrGrp) {
 
     qqueue_usrGrp_row *aRow;
     I_List_iterator<qqueue_usrGrp_row> usrGrpIter(usrGrps);
-    while (aRow = usrGrpIter++) {
+    while ( (aRow = usrGrpIter++) ) {
         if (strcmp(aRow->name, usrGrp) == 0) {
             return aRow;
         }
@@ -606,7 +626,7 @@ qqueue_queues_row *getQueue(char *queue) {
 
     qqueue_queues_row *aRow;
     I_List_iterator<qqueue_queues_row> queueIter(queues);
-    while (aRow = queueIter++) {
+    while ( (aRow = queueIter++) ) {
         if (strcmp(aRow->name, queue) == 0) {
             return aRow;
         }
@@ -622,7 +642,7 @@ qqueue_queues_row *getQueueByID(long long id) {
 
     qqueue_queues_row *aRow;
     I_List_iterator<qqueue_queues_row> queueIter(queues);
-    while (aRow = queueIter++) {
+    while ( (aRow = queueIter++) ) {
         if (aRow->id == id) {
             return aRow;
         }
@@ -660,7 +680,7 @@ bool checkIfResultTableExists(TABLE *inThisTable, char *database, char *tblName)
 
     mysql_mutex_lock(&LOCK_jobs);
     error = inThisTable->file->ha_rnd_init(true);
-#if MYSQL_VERSION_ID >= 50601
+#if MYSQL_VERSION_ID >= 50601 || (defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500)
     while (!(error = inThisTable->file->ha_rnd_next(inThisTable->record[0]))) {
 #else
     while (!(error = inThisTable->file->rnd_next(inThisTable->record[0]))) {
@@ -843,7 +863,7 @@ int resetJobQueue(enum_queue_status status) {
 
     Open_tables_backup backup;
     TABLE *inThisJobsTable = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, false, &error);
-    if (error || inThisJobsTable == NULL && error != HA_STATUS_NO_LOCK) {
+    if (error || (inThisJobsTable == NULL && error != HA_STATUS_NO_LOCK) ) {
         fprintf(stderr, "qqueue_daemon_reset: error in opening jobs sys table: error: %i\n", error);
         close_sysTbl(current_thd, inThisJobsTable, &backup);
         return -1;
@@ -890,7 +910,7 @@ int resetJobQueue(enum_queue_status status) {
     for (int i = 0; i < jobCount; i++) {
         error = 0;
         inThisJobsTable = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, false, &error);
-        if (error || inThisJobsTable == NULL && error != HA_STATUS_NO_LOCK) {
+        if (error || (inThisJobsTable == NULL && error != HA_STATUS_NO_LOCK) ) {
             fprintf(stderr, "qqueue_daemon_reset2: error in opening jobs sys table: error: %i\n", error);
             close_sysTbl(current_thd, inThisJobsTable, &backup);
             return -1;

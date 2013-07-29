@@ -115,7 +115,7 @@ int addResultTableSQL(const char *inQuery, char **outQuery, char *db, char *tabl
     char *currStr;
     char *selectPt;
     int prePend;
-    while (currStr = tokenList_iter++) {
+    while ( (currStr = tokenList_iter++) ) {
         selectPt = strstr(currStr, "SELECT ");
         if (selectPt != NULL) {
             prePend = selectPt - uppCseStrCpy;
@@ -198,7 +198,7 @@ int validateMultiSQL(const char *inQuery) {
     char *currStr;
     char *selectPt;
     char *createPt;
-    while (currStr = tokenList_iter++) {
+    while ( (currStr = tokenList_iter++) ) {
         selectPt = strstr(currStr, "SELECT ");
         if (selectPt != NULL) {
             //each select, needs to come with a create...

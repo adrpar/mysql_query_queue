@@ -4,19 +4,22 @@ project (daemon_jobqueue)
 ###########################################################
 #### uncomment this, if you want to specify own mysql path
 ###########################################################
-set(MYSQL_PATH "/usr/local/mysql")
+set(MYSQL_PATH "/usr/local/mariadb")
 
 ###########################################################
 #### path to the mysql 5.5/5.6 sources - download them from
 #### www.mysql.com if you don't have them 
 ###########################################################
-set(MYSQL_SOURCES_PATH "/home/adrpar/Downloads/mysql-5.5.14-spider-2.28-vp-0.17-hs-1.1-q4m-0.95")
+set(MYSQL_SOURCES_PATH "/Users/adrian/Downloads/mariadb-5.5.32")
 
 if(MYSQL_PATH)
     set(MYSQL_CONFIG "${MYSQL_PATH}/bin/mysql_config")
 else()
     find_file(MYSQL_CONFIG mysql_config)
 endif()
+
+#UNCOMMENT THIS IF YOU ARE USING CLANG (MAC OS X USERS!)
+SET(CMAKE_LINKER "ld")
 
 execute_process(COMMAND ${MYSQL_CONFIG} --include OUTPUT_VARIABLE MYSQL_INCLUDE_DIR)
 execute_process(COMMAND ${MYSQL_CONFIG} --libs OUTPUT_VARIABLE MYSQL_LIBRARIES)
@@ -39,6 +42,7 @@ STRING(REGEX MATCHALL "-D([^ ]*)" defineList "${mysqlConfig}")
 message("Found the following defines in your mysqld configuration: ${defineList}")
 
 add_definitions(${defineList})
+add_definitions(-DDISABLE_DTRACE)
 
 #add_definitions(-D__QQUEUE_DEBUG__)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MYSQL_INCLUDE_DIR} -fPIC -fno-exceptions -fno-rtti")

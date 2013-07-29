@@ -558,7 +558,7 @@ my_bool qqueue_addJob_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
     List_iterator<LEX_STRING> db_names_iter(db_names);
     LEX_STRING *currDBStr;
     bool found = 0;
-    while (currDBStr = db_names_iter++) {
+    while ( (currDBStr = db_names_iter++) ) {
         if (strcmp((char *)args->args[5], currDBStr->str) == 0) {
             found = 1;
             break;
@@ -581,7 +581,7 @@ my_bool qqueue_addJob_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
     List_iterator<LEX_STRING> tbl_names_iter(table_names);
     LEX_STRING *currTblStr;
     found = 0;
-    while (currTblStr = tbl_names_iter++) {
+    while ( (currTblStr = tbl_names_iter++) ) {
         if (strcmp((char *)args->args[6], currTblStr->str) == 0) {
             found = 1;
             break;
@@ -667,7 +667,11 @@ long long qqueue_addJob(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *i
     ulonglong jobId;
     if(args->args[0] == NULL) {
         //calculate unique (hopefully) id for this job
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+        jobId = microsecond_interval_timer();
+#else        
         jobId = my_micro_time();
+#endif
         //shift by 8 bits to make some space for a random component
         jobId = jobId << 8;
         //add the last 8 bits of a random number to the id
@@ -806,7 +810,7 @@ long long qqueue_killJob(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *
 
         Open_tables_backup backup;
         TABLE *tbl = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, true, &error);
-        if (error || tbl == NULL && error != HA_STATUS_NO_LOCK) {
+        if (error || (tbl == NULL && error != HA_STATUS_NO_LOCK) ) {
             fprintf(stderr, "qqueue_killJob: error in opening jobs sys table\n");
             close_sysTbl(current_thd, udfData->tbl, &backup);
             return 1;

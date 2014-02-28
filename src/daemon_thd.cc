@@ -41,7 +41,7 @@
 #include <transaction.h>
 #include "daemon_thd.h"
 
-#if MYSQL_VERSION_ID >= 50606
+#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50606
 #include <global_threads.h>
 #endif
 
@@ -49,8 +49,12 @@
 #pragma implementation
 #endif
 
-#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500 && MYSQL_VERSION_ID < 100000
 extern uint kill_one_thread(THD *thd, ulong id, killed_state kill_signal);
+#endif
+
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+extern uint kill_one_thread(THD *thd, longlong id, killed_state kill_signal, killed_type type);
 #endif
 
 void pre_init_daemon_thread(THD *thd) {
@@ -58,7 +62,11 @@ void pre_init_daemon_thread(THD *thd) {
     thd->security_ctx->master_access = 0;
     thd->security_ctx->db_access = 0;
     thd->security_ctx->host_or_ip = (char *)my_localhost;
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+    my_net_init(&thd->net, NULL, MYF(MY_THREAD_SPECIFIC));
+#else
     my_net_init(&thd->net, NULL);
+#endif
     thd->security_ctx->set_user((char *)"queue_daemon");
     thd->net.read_timeout = slave_net_timeout;
     thd->slave_thread = 0;
@@ -88,7 +96,7 @@ bool post_init_daemon_thread(THD *thd) {
         return TRUE;
     }
 
-#if MYSQL_VERSION_ID < 50605
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50605
     thd->start_time = my_time(0);
 #else
     my_micro_time_to_timeval(my_micro_time(), &thd->start_time);
@@ -101,7 +109,7 @@ bool post_init_daemon_thread(THD *thd) {
     pthread_mutex_lock(&LOCK_thread_count);
 #endif
 
-#if MYSQL_VERSION_ID < 50606
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50606
     threads.append(thd);
     ++thread_count;
 #else
@@ -143,7 +151,11 @@ int init_thread(THD **thd, const char *threadInfo, bool daemon) {
     (*thd)->security_ctx->master_access = 0;
     (*thd)->security_ctx->db_access = 0;
     (*thd)->security_ctx->host_or_ip = (char *)my_localhost;
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+    my_net_init(&(*thd)->net, NULL, MYF(MY_THREAD_SPECIFIC));
+#else
     my_net_init(&(*thd)->net, NULL);
+#endif
     (*thd)->security_ctx->set_user((char *)"queue_daemon");
     (*thd)->net.read_timeout = slave_net_timeout;
     (*thd)->slave_thread = 0;
@@ -155,7 +167,7 @@ int init_thread(THD **thd, const char *threadInfo, bool daemon) {
     (*thd)->proc_info = "Initialized";
     (*thd)->set_time();
 
-#if MYSQL_VERSION_ID < 50605
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50605
     (*thd)->start_time = my_time(0);
 #else
     my_micro_time_to_timeval(my_micro_time(), &(*thd)->start_time);
@@ -174,7 +186,7 @@ int init_thread(THD **thd, const char *threadInfo, bool daemon) {
     pthread_mutex_lock(&LOCK_thread_count);
 #endif
 
-#if MYSQL_VERSION_ID < 50606
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50606
     threads.append(*thd);
     ++thread_count;
 #else
@@ -217,7 +229,7 @@ int deinit_thread(THD **thd) {
         pthread_mutex_lock(&LOCK_thread_count);
 #endif
 
-#if MYSQL_VERSION_ID < 50606
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50606
         (*thd)->unlink();
         --thread_count;
 #else
@@ -253,8 +265,10 @@ int deinit_thread(THD **thd) {
 
 void sql_kill(THD *thd, ulong id, bool only_kill_query) {
     uint error;
-#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
-   if (!(error = kill_one_thread(thd, id, (killed_state)only_kill_query))) {
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500 && MYSQL_VERSION_ID < 100000
+   if (!(error = kill_one_thread(thd, id, (killed_state)(only_kill_query ? 4 : 8)))) {
+#elif defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+   if (!(error = kill_one_thread(thd, id, (killed_state)(only_kill_query ? 4 : 8), KILL_TYPE_ID))) {
 #else
    if (!(error = kill_one_thread(thd, id, (THD::killed_state)only_kill_query))) {
 #endif

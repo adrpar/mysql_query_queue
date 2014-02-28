@@ -548,17 +548,26 @@ my_bool qqueue_addJob_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
     }
 
     //obtain list of all databases
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+    Dynamic_array<LEX_STRING*> db_names;    
+#else
     List<LEX_STRING> db_names;
+#endif
     bool with_i_schema;
     if (make_db_list(current_thd, &db_names, &with_i_schema)) {
         strcpy(message, "qqueue_addJob() could not retrieve list of databases");
         return 1;
     }
 
-    List_iterator<LEX_STRING> db_names_iter(db_names);
     LEX_STRING *currDBStr;
     bool found = 0;
-    while ( (currDBStr = db_names_iter++) ) {
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+    for (size_t i = 0; i < db_names.elements(); i++) {
+        currDBStr= db_names.at(i);
+#else
+    List_iterator<LEX_STRING> db_names_iter(db_names);
+    while (currDBStr = db_names_iter++) {
+#endif
         if (strcmp((char *)args->args[5], currDBStr->str) == 0) {
             found = 1;
             break;
@@ -572,16 +581,25 @@ my_bool qqueue_addJob_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
 
 
     //check if the table exists in the database
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+    Dynamic_array<LEX_STRING*> table_names;    
+#else
     List<LEX_STRING> table_names;
+#endif
     if (make_table_name_list(current_thd, &table_names, with_i_schema, currDBStr)) {
         strcpy(message, "qqueue_addJob() could not retrieve list of tables for specified database");
         return 1;
     }
 
-    List_iterator<LEX_STRING> tbl_names_iter(table_names);
     LEX_STRING *currTblStr;
     found = 0;
-    while ( (currTblStr = tbl_names_iter++) ) {
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+    for (size_t i = 0; i < table_names.elements(); i++) {
+        currTblStr= table_names.at(i);
+#else
+    List_iterator<LEX_STRING> tbl_names_iter(table_names);
+    while (currTblStr = tbl_names_iter++) {
+#endif
         if (strcmp((char *)args->args[6], currTblStr->str) == 0) {
             found = 1;
             break;
@@ -675,7 +693,22 @@ long long qqueue_addJob(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *i
         //shift by 8 bits to make some space for a random component
         jobId = jobId << 8;
         //add the last 8 bits of a random number to the id
-        jobId += (ulonglong)(sql_rnd_with_mutex() & 0x000000ff);
+
+#if MYSQL_VERSION_ID >= 50505
+        mysql_mutex_lock(&LOCK_thread_count);
+#else
+        pthread_mutex_lock(&LOCK_thread_count);
+#endif
+
+        ulong tmp=(ulong) (my_rnd(&sql_rand) * 0xffffffff);
+
+#if MYSQL_VERSION_ID >= 50505
+        mysql_mutex_unlock(&LOCK_thread_count);
+#else
+        pthread_mutex_unlock(&LOCK_thread_count);
+#endif
+
+        jobId += (ulonglong)(tmp & 0x000000ff);
     } else {
         jobId = *(long long *) args->args[0];
     }

@@ -51,7 +51,7 @@ enum enum_queue_status {
     QUEUE_KILLED
 };
 
-#if MYSQL_VERSION_ID >= 50605
+#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50605
 class qqueue_usrGrp_row : public ilink<qqueue_usrGrp_row> {
 #else
 class qqueue_usrGrp_row : public ilink {
@@ -62,7 +62,7 @@ public:
     int priority;
 };
 
-#if MYSQL_VERSION_ID >= 50605
+#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50605
 class qqueue_queues_row : public ilink<qqueue_queues_row> {
 #else
 class qqueue_queues_row : public ilink {
@@ -74,7 +74,7 @@ public:
     long long timeout;
 };
 
-#if MYSQL_VERSION_ID >= 50605
+#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50605
 class qqueue_jobs_row : public ilink<qqueue_jobs_row> {
 #else
 class qqueue_jobs_row : public ilink {

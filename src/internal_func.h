@@ -31,10 +31,20 @@
 #pragma implementation
 #endif
 
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+int make_db_list(THD *thd, Dynamic_array<LEX_STRING*> *files,
+                 bool *with_i_schema);
+#else
 int make_db_list(THD *thd, List<LEX_STRING> *files,
                  bool *with_i_schema);
+#endif
 
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 100000
+int make_table_name_list(THD *thd, Dynamic_array<LEX_STRING*> *table_names,
+                         bool with_i_schema, LEX_STRING *db_name);
+#else
 int make_table_name_list(THD *thd, List<LEX_STRING> *table_names,
                          bool with_i_schema, LEX_STRING *db_name);
+#endif
 
 #endif

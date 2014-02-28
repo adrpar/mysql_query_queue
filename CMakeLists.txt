@@ -10,7 +10,12 @@ set(MYSQL_PATH "/usr/local/mariadb")
 #### path to the mysql 5.5/5.6 sources - download them from
 #### www.mysql.com if you don't have them 
 ###########################################################
-set(MYSQL_SOURCES_PATH "/Users/adrian/Downloads/mariadb-5.5.32")
+set(MYSQL_SOURCES_PATH "/home/adrpar/Downloads/mariadb-10.0.8")
+
+###########################################################
+#### uncomment this, if you compile for MariaDB 10.0
+###########################################################
+set(MARIADB 1)
 
 if(MYSQL_PATH)
     set(MYSQL_CONFIG "${MYSQL_PATH}/bin/mysql_config")
@@ -20,9 +25,11 @@ endif()
 
 execute_process(COMMAND ${MYSQL_CONFIG} --include OUTPUT_VARIABLE MYSQL_INCLUDE_DIR)
 execute_process(COMMAND ${MYSQL_CONFIG} --libs OUTPUT_VARIABLE MYSQL_LIBRARIES)
+execute_process(COMMAND ${MYSQL_CONFIG} --variable=pkglibdir OUTPUT_VARIABLE MYSQL_LIBDIR)
 execute_process(COMMAND ${MYSQL_CONFIG} --plugindir OUTPUT_VARIABLE MYSQL_PLUGIN_DIR)
 
 STRING(REGEX REPLACE "\n" "" MYSQL_INCLUDE_DIR ${MYSQL_INCLUDE_DIR})
+STRING(REGEX REPLACE "\n" "" MYSQL_LIBDIR ${MYSQL_LIBDIR})
 STRING(REGEX REPLACE "\n" "" MYSQL_LIBRARIES ${MYSQL_LIBRARIES})
 STRING(REGEX REPLACE "\n" "" MYSQL_PLUGIN_DIR ${MYSQL_PLUGIN_DIR})
 
@@ -39,12 +46,36 @@ STRING(REGEX MATCHALL "-D([^ ]*)" defineList "${mysqlConfig}")
 message("Found the following defines in your mysqld configuration: ${defineList}")
 
 add_definitions(${defineList})
-add_definitions(-DDISABLE_DTRACE)
+
+#PCRE configuration taken from MariaDB 10 source
+if(MARIADB)
+	file(STRINGS ${MYSQL_SOURCES_PATH}/pcre/configure.ac
+	  configure_lines
+	  LIMIT_COUNT 50 # Read only the first 50 lines of the file
+	)
+
+	set(SEARCHED_VARIABLES "pcre_major" "pcre_minor" "pcre_prerelease" "pcre_date")
+	foreach(configure_line ${configure_lines})
+	    foreach(_substitution_variable ${SEARCHED_VARIABLES})
+	        string(TOUPPER ${_substitution_variable} _substitution_variable_upper)
+	        if (NOT ${_substitution_variable_upper})
+	            string(REGEX MATCH "m4_define\\(${_substitution_variable}, \\[(.*)\\]" MACTHED_STRING ${configure_line})
+	            if (CMAKE_MATCH_1)
+	                set(${_substitution_variable_upper} ${CMAKE_MATCH_1})
+	            endif()
+	        endif()
+	    endforeach()
+	endforeach()
+
+	CONFIGURE_FILE(${MYSQL_SOURCES_PATH}/pcre/pcre.h.in
+	               ${PROJECT_BINARY_DIR}/pcre.h
+	               @ONLY)
+endif()
 
 #add_definitions(-D__QQUEUE_DEBUG__)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MYSQL_INCLUDE_DIR} -fPIC -fno-exceptions -fno-rtti")
 
-include_directories ("${PROJECT_SOURCE_DIR}" "${MYSQL_SOURCES_PATH}/include" "${MYSQL_SOURCES_PATH}/mysys" "${MYSQL_SOURCES_PATH}/regex" "${MYSQL_SOURCES_PATH}/sql" "${MYSQL_SOURCES_PATH}")
+include_directories ("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}" "${MYSQL_SOURCES_PATH}/include" "${MYSQL_SOURCES_PATH}/mysys" "${MYSQL_SOURCES_PATH}/regex" "${MYSQL_SOURCES_PATH}/sql" "${MYSQL_SOURCES_PATH}")
 
 file(GLOB FILES_SRC "${PROJECT_SOURCE_DIR}/src/*.h" "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/*.cc")
 
@@ -52,6 +83,11 @@ add_library (daemon_jobqueue ${FILES_SRC})
 
 #get rid of the lib infront of the target file name
 set_target_properties(daemon_jobqueue PROPERTIES PREFIX "")
+
+if(MARIADB)
+	find_library(SERVICELIB NAMES mysqlservices libmysqlservices HINTS "${MYSQL_LIBDIR}")
+	target_link_libraries(daemon_jobqueue ${SERVICELIB})
+endif()
 
 INSTALL(TARGETS daemon_jobqueue DESTINATION "${MYSQL_PLUGIN_DIR}")
 

@@ -859,7 +859,7 @@ int resetJobQueue(enum_queue_status status) {
     int error = 0;
     ulonglong *workArray = NULL;
 
-    fprintf(stderr, "QQuery: Reseting the jobs list after restart\n");
+    fprintf(stderr, "QQuery: Resetting the jobs list after restart\n");
 
     Open_tables_backup backup;
     TABLE *inThisJobsTable = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, false, &error);

@@ -47,7 +47,7 @@
 
 #include <key.h>
 
-#if MYSQL_VERSION_ID >= 50606
+#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50606
 #include <global_threads.h>
 #endif
 
@@ -428,7 +428,7 @@ pthread_handler_t qqueue_daemon(void *p) {
 
             THD *currThd = queueList.array[i]->thd;
 
-#if MYSQL_VERSION_ID >= 50605
+#if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50605
             if (currThd->start_time.tv_sec) {
                 int runtime = (longlong) (now - currThd->start_time.tv_sec);
 #else
@@ -523,7 +523,7 @@ static int qqueue_plugin_init(void *p) {
         net_end(&new_thd->net);
         mysql_mutex_lock(&LOCK_thread_count);
 
-#if MYSQL_VERSION_ID < 50606
+#if defined(MARIADB_BASE_VERSION) || MYSQL_VERSION_ID < 50606
         --thread_count;
 #else
         remove_global_thread(new_thd);

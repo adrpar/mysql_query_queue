@@ -4,7 +4,7 @@ project (daemon_jobqueue)
 ###########################################################
 #### uncomment this, if you want to specify own mysql path
 ###########################################################
-set(MYSQL_PATH "/usr/local/mariadb")
+set(MYSQL_PATH "/usr/local/mysql")
 
 ###########################################################
 #### path to the mysql 5.5/5.6 sources - download them from
@@ -15,7 +15,7 @@ set(MYSQL_SOURCES_PATH "/home/adrpar/Downloads/mariadb-10.0.8")
 ###########################################################
 #### uncomment this, if you compile for MariaDB 10.0
 ###########################################################
-set(MARIADB 1)
+#set(MARIADB 1)
 
 if(MYSQL_PATH)
     set(MYSQL_CONFIG "${MYSQL_PATH}/bin/mysql_config")

@@ -284,7 +284,8 @@ public:
                     }
                 }
 
-                my_free(jobArray);
+                if(jobArray != NULL)
+                    my_free(jobArray);
                 break;
             }
         }
@@ -410,7 +411,8 @@ pthread_handler_t qqueue_daemon(void *p) {
             queueList.registerJob(jobArray[i]);
         }
 
-        my_free(jobArray);
+        if(jobArray != NULL)
+            my_free(jobArray);
 
         //check if running queries have reached their timeout
 #if MYSQL_VERSION_ID >= 50505

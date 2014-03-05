@@ -162,7 +162,7 @@ public:
 
         jobWorkerThd *job = new jobWorkerThd();
         job->job = thisJob;
-        job->thd = NULL;
+        job->thd = new THD;
         job->thdTerm = queueRegisterThreadEnd;
         job->thdKillHandler = queueRegisterThreadKill;
         job->killReasonTimeout = false;

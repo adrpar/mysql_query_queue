@@ -132,7 +132,8 @@ void loadQqueueUsrGrps(TABLE *fromThisTable) {
     usrGrps.empty();
 
     while(!(error = read_record_info.read_record(&read_record_info))) {
-        String newString;
+        char buff[MAX_FIELD_WIDTH];
+        String newString(buff, sizeof(buff), system_charset_info);
         fromThisTable->field[1]->val_str(&newString);
 
         qqueue_usrGrp_row *aRow = new qqueue_usrGrp_row;
@@ -173,7 +174,8 @@ void loadQqueueQueues(TABLE *fromThisTable) {
     queues.empty();
 
     while(!(error = read_record_info.read_record(&read_record_info))) {
-        String newString;
+        char buff[MAX_FIELD_WIDTH];
+        String newString(buff, sizeof(buff), system_charset_info);
         fromThisTable->field[1]->val_str(&newString);
 
         qqueue_queues_row *aRow = new qqueue_queues_row;
@@ -688,10 +690,12 @@ bool checkIfResultTableExists(TABLE *inThisTable, char *database, char *tblName)
         if (inThisTable->field[6]->val_int() != QUEUE_PENDING)
             continue;
 
-        String tmpStr;
+        char buff[MAX_FIELD_WIDTH];
+        String tmpStr(buff, sizeof(buff), system_charset_info);
         inThisTable->field[7]->val_str(&tmpStr);
         if (strcmp(tmpStr.c_ptr(), database) == 0) {
-            String tmpStr2;
+            char buff2[MAX_FIELD_WIDTH];
+            String tmpStr2(buff2, sizeof(buff2), system_charset_info);
             inThisTable->field[8]->val_str(&tmpStr2);
             if (strcmp(tmpStr2.c_ptr(), tblName) == 0) {
                 found = true;
@@ -819,36 +823,38 @@ qqueue_jobs_row *getJobFromID(TABLE *fromThisTable, ulonglong id) {
 
 qqueue_jobs_row *extractJobFromTable(TABLE *fromThisTable) {
     qqueue_jobs_row *returnJob = new qqueue_jobs_row();
+    char buff[MAX_FIELD_WIDTH], buff1[MAX_FIELD_WIDTH], buff2[MAX_FIELD_WIDTH], buff3[MAX_FIELD_WIDTH];
+    char buff4[MAX_FIELD_WIDTH], buff5[MAX_FIELD_WIDTH], buff6[MAX_FIELD_WIDTH];
 
     returnJob->id = fromThisTable->field[0]->val_int();
-    String tmpStr1;
+    String tmpStr1(buff1, sizeof(buff1), system_charset_info);
     fromThisTable->field[1]->val_str(&tmpStr1);
     returnJob->mysqlUserName = my_strdup(tmpStr1.c_ptr(), MYF(0));
     returnJob->usrId = fromThisTable->field[2]->val_int();
     returnJob->usrGroup = fromThisTable->field[3]->val_int();
     returnJob->queue = fromThisTable->field[4]->val_int();
     returnJob->priority = fromThisTable->field[5]->val_int();
-    String tmpStr;
+    String tmpStr(buff, sizeof(buff), system_charset_info);
     fromThisTable->field[6]->val_str(&tmpStr);
     returnJob->query = my_strdup(tmpStr.c_ptr(), MYF(0));
     returnJob->status = (enum_queue_status)fromThisTable->field[7]->val_int();
-    String tmpStr2;
+    String tmpStr2(buff2, sizeof(buff2), system_charset_info);
     fromThisTable->field[8]->val_str(&tmpStr2);
     strncpy(returnJob->resultDBName, tmpStr2.c_ptr(), QQUEUE_RESULTDBNAME_LEN);
-    String tmpStr3;
+    String tmpStr3(buff3, sizeof(buff3), system_charset_info);
     fromThisTable->field[9]->val_str(&tmpStr3);
     strncpy(returnJob->resultTableName, tmpStr3.c_ptr(), QQUEUE_RESULTTBLNAME_LEN);
     returnJob->paquFlag = fromThisTable->field[10]->val_int();
     fromThisTable->field[11]->get_date(&returnJob->timeSubmit, 0);
     fromThisTable->field[12]->get_date(&returnJob->timeExecute, 0);
     fromThisTable->field[13]->get_date(&returnJob->timeFinish, 0);
-    String tmpStr4;
+    String tmpStr4(buff4, sizeof(buff4), system_charset_info);
     fromThisTable->field[14]->val_str(&tmpStr4);
     returnJob->actualQuery = my_strdup(tmpStr4.c_ptr(), MYF(0));
-    String tmpStr5;
+    String tmpStr5(buff5, sizeof(buff5), system_charset_info);
     fromThisTable->field[15]->val_str(&tmpStr5);
     strncpy(returnJob->error, tmpStr5.c_ptr(), QQUEUE_ERROR_LEN);
-    String tmpStr6;
+    String tmpStr6(buff6, sizeof(buff6), system_charset_info);
     fromThisTable->field[16]->val_str(&tmpStr6);
     returnJob->comment = my_strdup(tmpStr6.c_ptr(), MYF(0));
 

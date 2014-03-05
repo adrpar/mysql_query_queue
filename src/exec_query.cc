@@ -40,6 +40,10 @@
 #include "daemon_thd.h"
 #include "sql_query.h"
 
+#ifdef WITH_PERFSCHEMA_STORAGE_ENGINE
+#include <storage/perfschema/pfs_server.h>
+#endif /* WITH_PERFSCHEMA_STORAGE_ENGINE */
+
 
 #ifdef USE_PRAGMA_IMPLEMENTATION
 #pragma implementation
@@ -67,6 +71,16 @@ pthread_handler_t worker_thread(void *arg) {
     db.str = "mysql";
     db.length = strlen("mysql");
 
+#ifdef HAVE_PSI_THREAD_INTERFACE
+      /*
+        Create new instrumentation for the new THD job,
+        and attach it to this running pthread.
+      */
+      PSI_thread *psi= PSI_THREAD_CALL(new_thread)(key_thread_one_connection,
+                                                   jobArg->thd, jobArg->thd->thread_id);
+      PSI_THREAD_CALL(set_thread)(psi);
+#endif
+
     newContext.change_security_context(jobArg->thd, &user, &host, &db, &old);
 
     int err;
@@ -75,6 +89,14 @@ pthread_handler_t worker_thread(void *arg) {
     }
 
     jobArg->thd->security_ctx->restore_security_context(jobArg->thd, old);
+
+#ifdef HAVE_PSI_THREAD_INTERFACE
+    /*
+      Delete the instrumentation for the job that just completed,
+      before parking this pthread in the cache (blocked on COND_thread_cache).
+    */
+    PSI_THREAD_CALL(delete_current_thread)();
+#endif
 
     //callback function to handle management of thread termination and processing
     //of new thread

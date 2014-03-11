@@ -301,6 +301,7 @@ public:
             if (array[i] != NULL) {
                 if (array[i]->job->id == id) {
                     //kill job
+                    registerThreadEnd(array[i], true, false);
                     sql_kill(array[i]->thd, array[i]->thd->thread_id, 0);
                     found = 1;
                     break;
@@ -314,6 +315,7 @@ public:
     int timeoutJob(jobWorkerThd *thisJob) {
         //kill job
         thisJob->killReasonTimeout = true;
+        registerThreadEnd(thisJob, false, true);
         sql_kill(thisJob->thd, thisJob->thd->thread_id, 0);
 
         return 0;
@@ -607,12 +609,6 @@ int queueRegisterThreadKill(jobWorkerThd *job) {
     THD::killed_state oldKill = job->thd->killed;
     job->thd->killed = THD::NOT_KILLED;
 #endif
-
-    if (job->killReasonTimeout == false) {
-        registerThreadEnd(job, true, false);
-    } else {
-        registerThreadEnd(job, false, true);
-    }
 
     queueList.unregisterAndStartNewJob(job);
 

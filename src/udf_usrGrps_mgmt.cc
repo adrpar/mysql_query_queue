@@ -828,6 +828,7 @@ long long qqueue_killJob(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *
 
     if (row == NULL) {
         unlockQueue();
+        close_sysTbl(current_thd, udfData->tbl, &udfData->backup);
         return -1;
     }
 

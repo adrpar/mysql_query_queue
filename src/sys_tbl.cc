@@ -321,8 +321,13 @@ int addQqueueJobsRow(qqueue_jobs_row *thisRow, TABLE *toThisTable, ulonglong id)
     mysql_mutex_unlock(&LOCK_jobs);
 
     if (error) {
+        if(error == 121) {
+            //if this is a duplicate entry and has been already added elsewhere, just ignore it
+            return 0;
+        }
+
         toThisTable->file->print_error(error, MYF(0));
-        fprintf(stderr, "QQuery: Error in writing systbl qqueue_jobs record: %i\n", error);
+        fprintf(stderr, "QQuery: Error in writing systbl qqueue_jobs record: %lli with error %i\n", id, error);
         return error;
     }
 

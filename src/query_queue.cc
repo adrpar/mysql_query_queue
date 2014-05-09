@@ -165,7 +165,6 @@ public:
         job->thd = new THD;
         job->thdTerm = queueRegisterThreadEnd;
         job->thdKillHandler = queueRegisterThreadKill;
-        job->killReasonTimeout = false;
 
         if (len - numActive <= 0)
             return 1;
@@ -258,7 +257,6 @@ public:
                         job->job = jobArray[0];
                         job->thdTerm = queueRegisterThreadEnd;
                         job->thdKillHandler = queueRegisterThreadKill;
-                        job->killReasonTimeout = false;
 
                         array[i] = job;
 
@@ -303,6 +301,12 @@ public:
                     //kill job
                     registerThreadEnd(array[i], true, false);
                     sql_kill(array[i]->thd, array[i]->thd->thread_id, 0);
+                    
+#ifdef __QQUEUE_NOWAIT_ON_KILL_TO_JOBRESTART__
+                    //start a new job before this one is actually properly killed
+                    queueRegisterThreadKill(array[i]);
+#endif
+
                     found = 1;
                     break;
                 }
@@ -314,9 +318,13 @@ public:
 
     int timeoutJob(jobWorkerThd *thisJob) {
         //kill job
-        thisJob->killReasonTimeout = true;
         registerThreadEnd(thisJob, false, true);
         sql_kill(thisJob->thd, thisJob->thd->thread_id, 0);
+
+#ifdef __QQUEUE_NOWAIT_ON_KILL_TO_JOBRESTART__
+        //start a new job before this one is actually properly killed
+        queueRegisterThreadKill(thisJob);
+#endif
 
         return 0;
     }
@@ -443,6 +451,12 @@ pthread_handler_t qqueue_daemon(void *p) {
 
                 if (runtime >= queue->timeout) {
                     //kill query
+#if MYSQL_VERSION_ID >= 50505
+                    mysql_mutex_unlock(&queueList.numActiveMutex);
+#else
+                    pthread_mutex_unlock(&queueList.numActiveMutex);
+#endif
+
                     queueList.timeoutJob(queueList.array[i]);
                 }
             }
@@ -603,16 +617,18 @@ int queueRegisterThreadEnd(jobWorkerThd *job) {
 int queueRegisterThreadKill(jobWorkerThd *job) {
     //fooling mysql to properly register things...
 #if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
-    killed_state oldKill = job->thd->killed;
-    job->thd->killed = NOT_KILLED;
+
 #else
-    THD::killed_state oldKill = job->thd->killed;
     job->thd->killed = THD::NOT_KILLED;
 #endif
 
     queueList.unregisterAndStartNewJob(job);
 
-    job->thd->killed = oldKill;
+#if defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50500
+
+#else
+    job->thd->killed = THD::KILL_QUERY;
+#endif
 
     return 0;
 }

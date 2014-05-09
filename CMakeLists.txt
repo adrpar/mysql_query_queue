@@ -17,6 +17,12 @@ set(MYSQL_SOURCES_PATH "/home/adrpar/Downloads/mariadb-10.0.8")
 ###########################################################
 #set(MARIADB 1)
 
+###########################################################
+#### uncomment this, if you want the queue to submit the next
+#### job BEFORE a job has been successfully killed
+###########################################################
+#add_definitions(-D__QQUEUE_NOWAIT_ON_KILL_TO_JOBRESTART__)
+
 if(MYSQL_PATH)
     set(MYSQL_CONFIG "${MYSQL_PATH}/bin/mysql_config")
 else()

@@ -44,7 +44,6 @@ struct jobWorkerThd {
     char *error;
     int (*thdTerm)(jobWorkerThd *);
     int (*thdKillHandler)(jobWorkerThd *);
-    bool killReasonTimeout;
     pthread_t pthd;
     THD *thd;
 

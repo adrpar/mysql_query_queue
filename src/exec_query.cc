@@ -51,7 +51,6 @@
 
 pthread_handler_t worker_thread(void *arg) {
     jobWorkerThd *jobArg = (jobWorkerThd *) arg;
-    jobArg->killReasonTimeout = false;
 
     init_thread(&(jobArg->thd), "stating thread...", false);
 
@@ -103,8 +102,10 @@ pthread_handler_t worker_thread(void *arg) {
     if (jobArg->thdTerm != NULL && jobArg->thd->killed == 0)
         (*jobArg->thdTerm)(jobArg);
 
+#ifndef __QQUEUE_NOWAIT_ON_KILL_TO_JOBRESTART__
     if (jobArg->thd->killed != 0)
         (*jobArg->thdKillHandler)(jobArg);
+#endif
 
     my_free(usrStr);
     my_free(hostStr);

@@ -47,6 +47,22 @@ To install
 3) edit CMakeList.txt accordingly to point to the directory
    of the mysql sources
 
+4) edit CMakeList.txt accordingly, if you are using MariaDB
+
+5) edit CMakeList.txt accordingly, if you want the queue to behave as follows:
+      Default behaviour:     Whenever a job is killed/timed out in the queue, the queue
+                             waits until the job has been successfully killed and starts
+                             the next job afterwards.
+
+                             In certain cases (especially with buggy storage engines or functions
+                             that don't handle MySQL KILL properly), this will lock up the queue if
+                             a MySQL thread cannot be killed. To prevent this, uncomment the approperiate
+                             option in CMakeLists.txt
+
+      Alternative behaviour: Whenever a job is killed/timed out in the queue, the queue starts
+                             the next job as soon as the kill request has been issued to the MySQL thread.
+                             The queue does not wait on the job to properly exit.
+
 4) mkdir build
    cd build
 

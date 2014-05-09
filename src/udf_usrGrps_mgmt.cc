@@ -814,12 +814,9 @@ void qqueue_killJob_deinit(UDF_INIT *initid) {
 long long qqueue_killJob(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *is_error) {
     qqueue_job_data *udfData = (qqueue_job_data *) initid->ptr;
 
-    lockQueue();
-
     int error;
     udfData->tbl = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &udfData->backup, true, &error);
     if (error) {
-        unlockQueue();
         return -1 * error;
     }
 
@@ -827,7 +824,6 @@ long long qqueue_killJob(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *
     qqueue_jobs_row *row = getJobFromID(udfData->tbl, *(long long *)args->args[0]);
 
     if (row == NULL) {
-        unlockQueue();
         close_sysTbl(current_thd, udfData->tbl, &udfData->backup);
         return -1;
     }
@@ -868,8 +864,6 @@ long long qqueue_killJob(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *
     } else if (row->status == QUEUE_RUNNING) {
         registerJobKill(*(long long *)args->args[0]);
     }
-
-    unlockQueue();
 
     return 0;
 }

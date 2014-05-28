@@ -226,7 +226,7 @@ public:
                 int error = 0;
                 Open_tables_backup backup;
                 TABLE *tbl = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, false, &error);
-                if (error || (tbl == NULL && (error != HA_STATUS_NO_LOCK || error != 2) ) ) {
+                if (error || (tbl == NULL && (error != HA_STATUS_NO_LOCK && error != 2) ) ) {
                     fprintf(stderr, "registerThreadEnd: error in opening jobs sys table: error: %i\n", error);
                     unregisterJob(array[i]);
                     close_sysTbl(current_thd, tbl, &backup);

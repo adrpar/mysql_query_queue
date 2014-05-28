@@ -99,7 +99,7 @@ pthread_handler_t worker_thread(void *arg) {
 
     //callback function to handle management of thread termination and processing
     //of new thread
-    if (jobArg->thdTerm != NULL && jobArg->thd->killed == 0)
+    if (jobArg->thdTerm != NULL && jobArg->thd->killed == 0) 
         (*jobArg->thdTerm)(jobArg);
 
 #ifndef __QQUEUE_NOWAIT_ON_KILL_TO_JOBRESTART__
@@ -227,8 +227,6 @@ int workload(jobWorkerThd *jobArg) {
 #endif
     }
 
-    my_free(queryCpy);
-    my_free(jobDes);
     jobArg->thd->update_server_status();
     jobArg->thd->protocol->end_statement();
     query_cache_end_of_result(jobArg->thd);
@@ -237,6 +235,9 @@ int workload(jobWorkerThd *jobArg) {
 #else
     jobArg->thd->stmt_da->reset_diagnostics_area();
 #endif
+
+    my_free(queryCpy);
+    my_free(jobDes);
 
     return 0;
 }
@@ -308,7 +309,7 @@ int registerThreadEnd(jobWorkerThd *job, bool killed, bool timedOut) {
     int error = 0;
     Open_tables_backup backup;
     TABLE *tbl = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, true, &error);
-    if (error || (tbl == NULL && error != HA_STATUS_NO_LOCK) ) {
+    if (error || (tbl == NULL && (error != HA_STATUS_NO_LOCK || error != 2) ) {
         fprintf(stderr, "registerThreadEnd: error in opening jobs sys table: error: %i\n", error);
         close_sysTbl(current_thd, tbl, &backup);
         return 1;

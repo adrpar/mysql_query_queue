@@ -226,8 +226,9 @@ public:
                 int error = 0;
                 Open_tables_backup backup;
                 TABLE *tbl = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, false, &error);
-                if (error || (tbl == NULL && error != HA_STATUS_NO_LOCK) ) {
+                if (error || (tbl == NULL && (error != HA_STATUS_NO_LOCK || error != 2) ) ) {
                     fprintf(stderr, "registerThreadEnd: error in opening jobs sys table: error: %i\n", error);
+                    unregisterJob(array[i]);
                     close_sysTbl(current_thd, tbl, &backup);
                     return 1;
                 }
@@ -236,21 +237,7 @@ public:
                 close_sysTbl(current_thd, tbl, &backup);
 
                 if (jobArray == NULL) {
-#if MYSQL_VERSION_ID >= 50505
-                    mysql_mutex_lock(&numActiveMutex);
-#else
-                    pthread_mutex_lock(&numActiveMutex);
-#endif
-
-                    array[i] = NULL;
-                    numActive--;
-
-#if MYSQL_VERSION_ID >= 50505
-                    mysql_mutex_unlock(&numActiveMutex);
-#else
-                    pthread_mutex_unlock(&numActiveMutex);
-#endif
-
+                    unregisterJob(array[i]);
                 } else {
                     if (jobArray[0] != NULL) {
                         jobWorkerThd *job = new jobWorkerThd();
@@ -265,20 +252,7 @@ public:
 
                         init_worker_thread(job);
                     } else {
-#if MYSQL_VERSION_ID >= 50505
-                        mysql_mutex_lock(&numActiveMutex);
-#else
-                        pthread_mutex_lock(&numActiveMutex);
-#endif
-
-                        array[i] = NULL;
-                        numActive--;
-
-#if MYSQL_VERSION_ID >= 50505
-                        mysql_mutex_unlock(&numActiveMutex);
-#else
-                        pthread_mutex_unlock(&numActiveMutex);
-#endif
+                        unregisterJob(array[i]);
                     }
                 }
 
@@ -435,8 +409,17 @@ pthread_handler_t qqueue_daemon(void *p) {
             if (queueList.array[i] == NULL)
                 continue;
 
-            if (queueList.array[i]->thd == NULL)
+            if (queueList.array[i]->thd == NULL) {
+                //this job has been killed/removed, so get rid of the job
+#if MYSQL_VERSION_ID >= 50505
+                mysql_mutex_unlock(&queueList.numActiveMutex);
+#else
+                pthread_mutex_unlock(&queueList.numActiveMutex);
+#endif
+
+                queueList.unregisterJob(queueList.array[i]);
                 continue;
+            }
 
             THD *currThd = queueList.array[i]->thd;
 

@@ -79,6 +79,7 @@ if(MARIADB)
 endif()
 
 #add_definitions(-D__QQUEUE_DEBUG__)
+add_definitions(-D__QQUEUE_DEBUG_LOCKS__)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MYSQL_INCLUDE_DIR} -fPIC -fno-exceptions -fno-rtti")
 
 include_directories ("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}" "${MYSQL_SOURCES_PATH}/include" "${MYSQL_SOURCES_PATH}/mysys" "${MYSQL_SOURCES_PATH}/regex" "${MYSQL_SOURCES_PATH}/sql" "${MYSQL_SOURCES_PATH}")

@@ -45,6 +45,10 @@
 #include "exec_query.h"
 #include "query_queue.h"
 
+#ifdef __QQUEUE_DEBUG_LOCKS__
+#include <execinfo.h>
+#endif
+
 #include <key.h>
 
 #if !defined(MARIADB_BASE_VERSION) && MYSQL_VERSION_ID >= 50606
@@ -154,11 +158,7 @@ public:
     }
 
     int registerJob(qqueue_jobs_row *thisJob) {
-#if MYSQL_VERSION_ID >= 50505
-        mysql_mutex_lock(&numActiveMutex);
-#else
-        pthread_mutex_lock(&numActiveMutex);
-#endif
+        lockQueue();
 
         jobWorkerThd *job = new jobWorkerThd();
         job->job = thisJob;
@@ -184,21 +184,13 @@ public:
 
         numActive++;
 
-#if MYSQL_VERSION_ID >= 50505
-        mysql_mutex_unlock(&numActiveMutex);
-#else
-        pthread_mutex_unlock(&numActiveMutex);
-#endif
+        unlockQueue();
 
         return 0;
     }
 
     int unregisterJob(jobWorkerThd *thisJob) {
-#if MYSQL_VERSION_ID >= 50505
-        mysql_mutex_lock(&numActiveMutex);
-#else
-        pthread_mutex_lock(&numActiveMutex);
-#endif
+        lockQueue();
 
         //look for this job in the array and unregister
         for (int i = 0; i < len; i++) {
@@ -209,11 +201,7 @@ public:
             }
         }
 
-#if MYSQL_VERSION_ID >= 50505
-        mysql_mutex_unlock(&numActiveMutex);
-#else
-        pthread_mutex_unlock(&numActiveMutex);
-#endif
+        unlockQueue();
 
         return 0;
     }
@@ -226,8 +214,9 @@ public:
                 int error = 0;
                 Open_tables_backup backup;
                 TABLE *tbl = open_sysTbl(current_thd, "qqueue_jobs", strlen("qqueue_jobs"), &backup, false, &error);
-                if (error || (tbl == NULL && (error != HA_STATUS_NO_LOCK && error != 2) ) ) {
-                    fprintf(stderr, "registerThreadEnd: error in opening jobs sys table: error: %i\n", error);
+                if ( error || (tbl == NULL && (error != HA_STATUS_NO_LOCK) ) ) {
+                    if( error != HA_STATUS_NO_LOCK )
+                        fprintf(stderr, "registerThreadEnd: error in opening jobs sys table: error: %i\n", error);
                     unregisterJob(array[i]);
                     close_sysTbl(current_thd, tbl, &backup);
                     return 1;
@@ -351,19 +340,11 @@ pthread_handler_t qqueue_daemon(void *p) {
             break;
         }
 
-#if MYSQL_VERSION_ID >= 50505
-        mysql_mutex_lock(&queueList.numActiveMutex);
-#else
-        pthread_mutex_lock(&queueList.numActiveMutex);
-#endif
+        lockQueue();
 
         int numActiveJobs = queueList.numActive;
 
-#if MYSQL_VERSION_ID >= 50505
-        mysql_mutex_unlock(&queueList.numActiveMutex);
-#else
-        pthread_mutex_unlock(&queueList.numActiveMutex);
-#endif
+        unlockQueue();
 
         int numEmptySlots = queueList.len - numActiveJobs;
 
@@ -399,11 +380,8 @@ pthread_handler_t qqueue_daemon(void *p) {
             my_free(jobArray);
 
         //check if running queries have reached their timeout
-#if MYSQL_VERSION_ID >= 50505
-        mysql_mutex_lock(&queueList.numActiveMutex);
-#else
-        pthread_mutex_lock(&queueList.numActiveMutex);
-#endif
+        lockQueue();
+
         time_t now = my_time(0);
         for (int i = 0; i < queueList.len; i++) {
             if (queueList.array[i] == NULL)
@@ -411,11 +389,7 @@ pthread_handler_t qqueue_daemon(void *p) {
 
             if (queueList.array[i]->thd == NULL) {
                 //this job has been killed/removed, so get rid of the job
-#if MYSQL_VERSION_ID >= 50505
-                mysql_mutex_unlock(&queueList.numActiveMutex);
-#else
-                pthread_mutex_unlock(&queueList.numActiveMutex);
-#endif
+                unlockQueue();
 
                 queueList.unregisterJob(queueList.array[i]);
                 continue;
@@ -434,22 +408,14 @@ pthread_handler_t qqueue_daemon(void *p) {
 
                 if (runtime >= queue->timeout) {
                     //kill query
-#if MYSQL_VERSION_ID >= 50505
-                    mysql_mutex_unlock(&queueList.numActiveMutex);
-#else
-                    pthread_mutex_unlock(&queueList.numActiveMutex);
-#endif
+                    unlockQueue();
 
                     queueList.timeoutJob(queueList.array[i]);
                 }
             }
         }
 
-#if MYSQL_VERSION_ID >= 50505
-        mysql_mutex_unlock(&queueList.numActiveMutex);
-#else
-        pthread_mutex_unlock(&queueList.numActiveMutex);
-#endif
+        unlockQueue();
 
         //get the time for sleep
         for (int i = 0; i < intervalSec; i++) {
@@ -628,6 +594,15 @@ void lockQueue() {
 #else
     pthread_mutex_lock(&queueList.numActiveMutex);
 #endif
+
+#ifdef __QQUEUE_DEBUG_LOCKS__
+    int nptrs;
+    void *buffer[100];
+    nptrs = backtrace(buffer, 100);
+    fprintf(stderr, "Queue locked by function: ");
+    backtrace_symbols_fd(buffer, nptrs, STDERR_FILENO);
+#endif
+
 }
 
 void unlockQueue() {
@@ -635,6 +610,14 @@ void unlockQueue() {
     mysql_mutex_unlock(&queueList.numActiveMutex);
 #else
     pthread_mutex_unlock(&queueList.numActiveMutex);
+#endif
+
+#ifdef __QQUEUE_DEBUG_LOCKS__
+    int nptrs;
+    void *buffer[100];
+    nptrs = backtrace(buffer, 100);
+    fprintf(stderr, "Queue unlocked by function: ");
+    backtrace_symbols_fd(buffer, nptrs, STDERR_FILENO);
 #endif
 }
 

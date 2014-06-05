@@ -1,17 +1,18 @@
 cmake_minimum_required (VERSION 2.6)
 project (daemon_jobqueue)
-
 ###########################################################
 #### uncomment this, if you want to specify own mysql path
 ###########################################################
-set(MYSQL_PATH "/usr/")
-
+if(NOT MYSQL_PATH)
+    set(MYSQL_PATH "/usr/")
+endif()
 ###########################################################
 #### path to the mysql 5.5/5.6 sources - download them from
 #### www.mysql.com if you don't have them 
 ###########################################################
-set(MYSQL_SOURCES_PATH "/usr/src/mysql/mysql-5.5/")
-
+if(NOT MYSQL_SOURCES_PATH)
+    set(MYSQL_SOURCES_PATH "/usr/src/mysql/mysql-5.5")
+endif()
 ###########################################################
 #### uncomment this, if you compile for MariaDB 10.0
 ###########################################################
